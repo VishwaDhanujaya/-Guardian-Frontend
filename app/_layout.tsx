@@ -1,29 +1,23 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+// Root layout: sets up a light background and renders children via <Slot />.
+// Keep this minimal. You can add providers (Auth, Theme, Toast) later if needed.
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
+import { ToastOverlay } from "@/components/toast";
+import { PortalHost } from "@rn-primitives/portal"; // <-- add this
+import { Slot } from "expo-router";
+import React from "react";
+import { SafeAreaView, StatusBar } from "react-native";
+import "../global.css"; // <-- fix path
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+        <Slot />
+      </SafeAreaView>
+
+      {/* Mount once, after your app tree, so overlays (menus/sheets/toasts) can portal above everything */}
+      <ToastOverlay />  
+      <PortalHost />
+    </>
   );
 }
