@@ -276,7 +276,7 @@ export default function Home() {
                       <CardHeader title="Manage" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Manage incidents", icon: Shield, onPress: () => {}, count: counts.incidents },
+                          { label: "Manage incidents", icon: Shield, onPress: () => router.push({ pathname: "/incidents", params: { role } }), count: counts.incidents },
                           { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
                           { label: "Safety alerts", icon: BellRing, onPress: () => {}, count: counts.alerts },
                           { label: "Case overview", icon: ClipboardList, onPress: () => {}, variant: "secondary", count: counts.cases },
@@ -327,7 +327,7 @@ export default function Home() {
                       <CardHeader title="Quick actions" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Report incident", icon: ShieldPlus, onPress: () => {} },
+                          { label: "Report incident", icon: ShieldPlus, onPress: () => router.push({ pathname: "/incidents", params: { role } }) },
                           { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
                           { label: "My reports", icon: ClipboardList, onPress: () => {}, count: counts.myReports },
                           { label: "Safety alerts", icon: BellRing, onPress: () => {}, variant: "secondary", count: counts.alerts },
