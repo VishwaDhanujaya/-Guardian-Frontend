@@ -1,3 +1,4 @@
+// app/(app)/incidents/manage-incidents.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,9 +18,12 @@ import { Text } from "@/components/ui/text";
 
 import {
     AlertTriangle,
+    BadgeCheck,
+    CheckCircle,
     CheckCircle2,
     ChevronLeft,
     ClipboardList,
+    Hammer,
     Inbox,
     Info,
     MessageSquare,
@@ -27,7 +31,15 @@ import {
 
 type Role = "citizen" | "officer";
 type Priority = "Urgent" | "Normal" | "Low";
-type Status = "New" | "In Review" | "Approved" | "Assigned" | "In Progress" | "Resolved" | "Closed" | "Overdue";
+type Status =
+  | "New"
+  | "In Review"
+  | "Approved"
+  | "Assigned"
+  | "In Progress"
+  | "Resolved"
+  | "Closed"
+  | "Overdue";
 
 type Row = {
   id: string;
@@ -43,18 +55,20 @@ type Row = {
   messageDraft?: string;
 };
 
+type TabKey = "approve" | "update" | "solved";
+
 export default function ManageIncidents() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
 
-  // Safe back
+  // Nav safety
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
     else router.replace({ pathname: "/home", params: { role: resolvedRole } });
   }, [navigation, resolvedRole]);
 
-  // Subtle mount animation
+  // Mount animation
   const mount = useRef(new Animated.Value(0.9)).current;
   useEffect(() => {
     Animated.spring(mount, {
@@ -70,41 +84,69 @@ export default function ManageIncidents() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   };
 
-  // Data
+  // Data (mock)
   const [rows, setRows] = useState<Row[]>([
     { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "1h ago", slaProgress: 95 },
     { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "New",         suggestedPriority: "Normal", reportedAgo: "12m ago", slaProgress: 10 },
-    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar .",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  slaProgress: 40 },
+    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  slaProgress: 40 },
     { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "New",         suggestedPriority: "Low",    reportedAgo: "3m ago",  slaProgress: 5  },
     { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "2h ago", slaProgress: 98 },
     { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review",   suggestedPriority: "Normal", reportedAgo: "8m ago",  slaProgress: 15 },
+    { id: "m7", title: "Noise complaint",            citizen: "Maria P.", status: "Resolved",    suggestedPriority: "Low",    reportedAgo: "1d ago" },
   ]);
 
-  // Filters
-  const [statusFilter, setStatusFilter] = useState<"All" | Status>("All");
-  const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
+  // Tabs
+  const [activeTab, setActiveTab] = useState<TabKey>("approve");
 
-  // Sorting (Overdue & higher priority first; then SLA)
+  // Priority filter (applies within tab)
+  const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
   const priorityWeight: Record<Priority, number> = { Urgent: 3, Normal: 2, Low: 1 };
   const statusWeight: Record<Status, number> = {
     Overdue: 7, New: 6, "In Review": 5, Approved: 4, Assigned: 3, "In Progress": 2, Resolved: 1, Closed: 0,
   };
 
+  // Partition rows by tab
+  const tabBuckets = useMemo(() => {
+    const approveSet: Status[] = ["New", "In Review"];
+    const updateSet: Status[] = ["Approved", "Assigned", "In Progress", "Overdue"];
+    const solvedSet:  Status[] = ["Resolved", "Closed"];
+
+    const approve = rows.filter(r => approveSet.includes(r.status));
+    const update  = rows.filter(r => updateSet.includes(r.status));
+    const solved  = rows.filter(r => solvedSet.includes(r.status));
+
+    return { approve, update, solved };
+  }, [rows]);
+
+  // Counts (for tab badges)
+  const counts = {
+    approve: tabBuckets.approve.length,
+    update:  tabBuckets.update.length,
+    solved:  tabBuckets.solved.length,
+  };
+
+  // List for active tab + priority filter + sensible sort
   const visibleRows = useMemo(() => {
-    const f = rows.filter((r) => {
-      const sOk = statusFilter === "All" ? true : r.status === statusFilter;
-      const pOk = priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter;
-      return sOk && pOk;
-    });
-    f.sort((a, b) => {
+    const base =
+      activeTab === "approve" ? tabBuckets.approve :
+      activeTab === "update"  ? tabBuckets.update  :
+                                tabBuckets.solved;
+
+    const filtered = base.filter(r => priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter);
+
+    filtered.sort((a, b) => {
+      // Overdue & higher status first (use weight within the subset)
       const sw = statusWeight[b.status] - statusWeight[a.status];
       if (sw !== 0) return sw;
+      // Higher suggested priority next
       const pw = priorityWeight[b.suggestedPriority] - priorityWeight[a.suggestedPriority];
       if (pw !== 0) return pw;
+      // Higher SLA usage last
       return (b.slaProgress ?? 0) - (a.slaProgress ?? 0);
     });
-    return f;
-  }, [rows, statusFilter, priorityFilter]);
+
+    return filtered;
+  }, [activeTab, tabBuckets, priorityFilter]);
 
   // Helpers
   const prioPill = (p: Priority) =>
@@ -130,23 +172,23 @@ export default function ManageIncidents() {
     </Pressable>
   );
 
-  // Row actions
+  // Action toggles per row
   const toggleUpdatePanel = (id: string) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, showUpdate: !r.showUpdate, showMessage: false } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, showUpdate: !r.showUpdate, showMessage: false } : r)));
   const toggleMessagePanel = (id: string) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, showMessage: !r.showMessage, showUpdate: false } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, showMessage: !r.showMessage, showUpdate: false } : r)));
 
   const approveRow = (id: string) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Approved", showUpdate: false } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, status: "Approved", showUpdate: false } : r)));
 
   const setDraft = (id: string, text: string) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, messageDraft: text } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, messageDraft: text } : r)));
   const setNotify = (id: string, value: boolean) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, notifyCitizen: value } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, notifyCitizen: value } : r)));
 
   const saveStatus = (id: string, newStatus: Status, notify: boolean, msg?: string) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: newStatus, showUpdate: false, notifyCitizen: false, messageDraft: "" } : r))
+    setRows(prev =>
+      prev.map(r => (r.id === id ? { ...r, status: newStatus, showUpdate: false, notifyCitizen: false, messageDraft: "" } : r))
     );
     if (notify && (msg?.trim()?.length ?? 0) > 0) toast.success("Update sent to citizen");
     else toast.success("Status updated");
@@ -154,7 +196,7 @@ export default function ManageIncidents() {
 
   const sendMessage = (id: string, msg?: string) => {
     if (!msg || !msg.trim()) return;
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, showMessage: false, messageDraft: "" } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, showMessage: false, messageDraft: "" } : r)));
     toast.success("Message sent to citizen");
   };
 
@@ -165,6 +207,44 @@ export default function ManageIncidents() {
     "We’re on our way.",
     "Your report has been resolved. Thank you!",
   ];
+
+  // Tab button (segmented style)
+  const TabButton = ({
+    tab,
+    label,
+    count,
+    Icon,
+  }: {
+    tab: TabKey;
+    label: string;
+    count?: number;
+    Icon: React.ComponentType<{ size?: number; color?: string }>;
+  }) => {
+    const active = activeTab === tab;
+    return (
+      <Pressable
+        onPress={() => setActiveTab(tab)}
+        className={`flex-1 flex-row items-center justify-center gap-2 h-10 rounded-xl border ${
+          active ? "bg-foreground border-transparent" : "bg-background border-border"
+        }`}
+        android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+      >
+        <Icon size={16} color={active ? "#FFFFFF" : "#0F172A"} />
+        <Text className={active ? "text-primary-foreground text-[13px]" : "text-foreground text-[13px]"}>{label}</Text>
+        {typeof count === "number" ? (
+          <View className={active ? "bg-primary/30 px-1.5 py-0.5 rounded-full" : "bg-foreground/10 px-1.5 py-0.5 rounded-full"}>
+            <Text className={active ? "text-primary-foreground text-[11px]" : "text-foreground text-[11px]"}>{count}</Text>
+          </View>
+        ) : null}
+      </Pressable>
+    );
+  };
+
+  // Action availability by tab
+  const canShowApprove = (status: Status) => activeTab === "approve" && (status === "New" || status === "In Review");
+  const canShowUpdate = (status: Status) => activeTab === "update"; // update tab controls statuses
+  const canShowMessage = (status: Status) =>
+    activeTab === "approve" || activeTab === "update" || (activeTab === "solved" && status !== "Closed" ? true : true);
 
   return (
     <KeyboardAwareScrollView
@@ -192,18 +272,15 @@ export default function ManageIncidents() {
             <View style={{ width: 56 }} />
           </View>
 
-          {/* Card */}
+          {/* Tabs */}
           <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-4" style={animStyle}>
-            {/* Filters */}
-            <View>
-              <Text className="text-xs text-foreground mb-1">Status</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {(["All", "New", "In Review", "Approved", "Assigned", "In Progress", "Resolved", "Closed", "Overdue"] as const).map((s) => (
-                  <Chip key={s} label={s} active={statusFilter === s} onPress={() => setStatusFilter(s)} />
-                ))}
-              </View>
+            <View className="flex-row gap-2">
+              <TabButton tab="approve" label="Approve" count={counts.approve} Icon={BadgeCheck} />
+              <TabButton tab="update"  label="Update"  count={counts.update}  Icon={Hammer} />
+              <TabButton tab="solved"  label="Solved"  count={counts.solved}  Icon={CheckCircle} />
             </View>
 
+            {/* Priority filter */}
             <View>
               <Text className="text-xs text-foreground mb-1">Suggested priority</Text>
               <View className="flex-row flex-wrap gap-2">
@@ -219,16 +296,16 @@ export default function ManageIncidents() {
                 <View className="w-14 h-14 rounded-full items-center justify-center bg-ring/10">
                   <Inbox size={28} color="#0F172A" />
                 </View>
-                <Text className="mt-3 font-semibold text-foreground">No incidents</Text>
-                <Text className="text-xs text-muted-foreground mt-1 text-center">Adjust your filters to see more.</Text>
+                <Text className="mt-3 font-semibold text-foreground">Nothing here</Text>
+                <Text className="text-xs text-muted-foreground mt-1 text-center">
+                  Try a different tab or adjust the priority filter.
+                </Text>
               </View>
             ) : (
               <View className="mt-1">
                 {visibleRows.map((r) => {
                   const pill = prioPill(r.suggestedPriority);
                   const PillIcon = pill.Icon;
-                  const canApprove = r.status === "New" || r.status === "In Review";
-                  const canMessage = r.status !== "Closed";
 
                   return (
                     <View key={r.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-2">
@@ -249,7 +326,7 @@ export default function ManageIncidents() {
                         </View>
                       </View>
 
-                      {/* SLA progress */}
+                      {/* SLA progress (where available) */}
                       {typeof r.slaProgress === "number" ? (
                         <View className="mt-3">
                           <View className="h-2 rounded-full bg-primary/10 overflow-hidden">
@@ -264,65 +341,96 @@ export default function ManageIncidents() {
                         </View>
                       ) : null}
 
-                      {/* Actions */}
+                      {/* Actions (vary by tab) */}
                       <View className="flex-row items-center gap-2 mt-3">
-                        <Button
-                          size="sm"
-                          variant={canApprove ? "default" : "secondary"}
-                          disabled={!canApprove}
-                          onPress={() => {
-                            approveRow(r.id);
-                            toast.success("Report approved");
-                          }}
-                          className="px-3 h-9 rounded-lg"
-                        >
-                          <View className="flex-row items-center gap-1">
-                            <CheckCircle2 size={14} color={canApprove ? "#FFFFFF" : "#0F172A"} />
-                            <Text className={canApprove ? "text-primary-foreground text-[12px]" : "text-foreground text-[12px]"}>
-                              Approve
-                            </Text>
-                          </View>
-                        </Button>
+                        {/* Approve tab: Approve + Message */}
+                        {activeTab === "approve" ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant={canShowApprove(r.status) ? "default" : "secondary"}
+                              disabled={!canShowApprove(r.status)}
+                              onPress={() => {
+                                approveRow(r.id);
+                                toast.success("Report approved");
+                              }}
+                              className="px-3 h-9 rounded-lg"
+                            >
+                              <View className="flex-row items-center gap-1">
+                                <CheckCircle2 size={14} color={canShowApprove(r.status) ? "#FFFFFF" : "#0F172A"} />
+                                <Text className={canShowApprove(r.status) ? "text-primary-foreground text-[12px]" : "text-foreground text-[12px]"}>
+                                  Approve
+                                </Text>
+                              </View>
+                            </Button>
 
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onPress={() => toggleUpdatePanel(r.id)}
-                          className="px-3 h-9 rounded-lg"
-                        >
-                          <View className="flex-row items-center gap-1">
-                            <ClipboardList size={14} color="#0F172A" />
-                            <Text className="text-[12px] text-foreground">Update status</Text>
-                          </View>
-                        </Button>
+                            <Button
+                              size="sm"
+                              onPress={() => toggleMessagePanel(r.id)}
+                              className="px-3 h-9 rounded-lg"
+                            >
+                              <View className="flex-row items-center gap-1">
+                                <MessageSquare size={14} color="#FFFFFF" />
+                                <Text className="text-primary-foreground text-[12px]">Message</Text>
+                              </View>
+                            </Button>
+                          </>
+                        ) : null}
 
-                        <Button
-                          size="sm"
-                          onPress={() => toggleMessagePanel(r.id)}
-                          className="px-3 h-9 rounded-lg"
-                          variant={canMessage ? "default" : "secondary"}
-                          disabled={!canMessage}
-                        >
-                          <View className="flex-row items-center gap-1">
-                            <MessageSquare size={14} color={canMessage ? "#FFFFFF" : "#0F172A"} />
-                            <Text className={canMessage ? "text-primary-foreground text-[12px]" : "text-foreground text-[12px]"}>
-                              Message
-                            </Text>
-                          </View>
-                        </Button>
+                        {/* Update tab: Update Status + Message */}
+                        {activeTab === "update" ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onPress={() => toggleUpdatePanel(r.id)}
+                              className="px-3 h-9 rounded-lg"
+                            >
+                              <View className="flex-row items-center gap-1">
+                                <ClipboardList size={14} color="#0F172A" />
+                                <Text className="text-[12px] text-foreground">Update status</Text>
+                              </View>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              onPress={() => toggleMessagePanel(r.id)}
+                              className="px-3 h-9 rounded-lg"
+                            >
+                              <View className="flex-row items-center gap-1">
+                                <MessageSquare size={14} color="#FFFFFF" />
+                                <Text className="text-primary-foreground text-[12px]">Message</Text>
+                              </View>
+                            </Button>
+                          </>
+                        ) : null}
+
+                        {/* Solved tab: Message only */}
+                        {activeTab === "solved" ? (
+                          <Button
+                            size="sm"
+                            onPress={() => toggleMessagePanel(r.id)}
+                            className="px-3 h-9 rounded-lg"
+                          >
+                            <View className="flex-row items-center gap-1">
+                              <MessageSquare size={14} color="#FFFFFF" />
+                              <Text className="text-primary-foreground text-[12px]">Message</Text>
+                            </View>
+                          </Button>
+                        ) : null}
                       </View>
 
-                      {/* Update panel */}
-                      {r.showUpdate ? (
+                      {/* Inline Update Panel (only in Update tab) */}
+                      {activeTab === "update" && r.showUpdate ? (
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Set status</Text>
                           <View className="flex-row flex-wrap gap-2 mt-2">
-                            {(["New", "In Review", "Approved", "Assigned", "In Progress", "Resolved", "Closed"] as const).map((opt) => {
+                            {(["Approved", "Assigned", "In Progress", "Resolved", "Closed"] as const).map((opt) => {
                               const active = r.status === opt;
                               return (
                                 <Pressable
                                   key={opt}
-                                  onPress={() => setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, status: opt } : x)))}
+                                  onPress={() => setRows(prev => prev.map(x => (x.id === r.id ? { ...x, status: opt } : x)))}
                                   className={`px-3 py-1 rounded-full border ${
                                     active ? "bg-foreground/10 border-transparent" : "bg-background border-border"
                                   }`}
@@ -366,18 +474,13 @@ export default function ManageIncidents() {
                         </View>
                       ) : null}
 
-                      {/* Message panel */}
+                      {/* Inline Message Panel (all tabs) */}
                       {r.showMessage ? (
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Message citizen</Text>
 
                           <View className="flex-row flex-wrap gap-2 mt-2">
-                            {[
-                              "We’ve received your report and are reviewing it.",
-                              "Your case has been approved and assigned.",
-                              "We’re on our way.",
-                              "Your report has been resolved. Thank you!",
-                            ].map((t) => (
+                            {templates.map((t) => (
                               <Pressable
                                 key={t}
                                 onPress={() => setDraft(r.id, t)}
