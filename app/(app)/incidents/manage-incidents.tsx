@@ -3,11 +3,11 @@ import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Animated,
-    Keyboard,
-    Pressable,
-    Switch,
-    View,
+  Animated,
+  Keyboard,
+  Pressable,
+  Switch,
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -17,16 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
 import {
-    AlertTriangle,
-    BadgeCheck,
-    CheckCircle,
-    CheckCircle2,
-    ChevronLeft,
-    ClipboardList,
-    Hammer,
-    Inbox,
-    Info,
-    MessageSquare,
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ClipboardList,
+  Hammer,
+  Inbox,
+  Info,
+  MessageSquare,
 } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
@@ -57,18 +57,24 @@ type Row = {
 
 type TabKey = "approve" | "update" | "solved";
 
+/**
+ * Officer-facing incidents management screen.
+ * - Tabs: Approve (triage), Update (status changes), Solved (post-resolution comms).
+ * - Filters by suggested priority and sorts by status, priority, and SLA usage.
+ * - Uses mock data; integrate backend data fetch/mutations where noted.
+ */
 export default function ManageIncidents() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
 
-  // Nav safety
+  // Navigation safety (fallback to /home if stack cannot go back)
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
     else router.replace({ pathname: "/home", params: { role: resolvedRole } });
   }, [navigation, resolvedRole]);
 
-  // Mount animation
+  // Entrance animation
   const mount = useRef(new Animated.Value(0.9)).current;
   useEffect(() => {
     Animated.spring(mount, {
@@ -98,14 +104,14 @@ export default function ManageIncidents() {
   // Tabs
   const [activeTab, setActiveTab] = useState<TabKey>("approve");
 
-  // Priority filter (applies within tab)
+  // Priority filter
   const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
   const priorityWeight: Record<Priority, number> = { Urgent: 3, Normal: 2, Low: 1 };
   const statusWeight: Record<Status, number> = {
     Overdue: 7, New: 6, "In Review": 5, Approved: 4, Assigned: 3, "In Progress": 2, Resolved: 1, Closed: 0,
   };
 
-  // Partition rows by tab
+  // Partition by tab
   const tabBuckets = useMemo(() => {
     const approveSet: Status[] = ["New", "In Review"];
     const updateSet: Status[] = ["Approved", "Assigned", "In Progress", "Overdue"];
@@ -118,14 +124,14 @@ export default function ManageIncidents() {
     return { approve, update, solved };
   }, [rows]);
 
-  // Counts (for tab badges)
+  // Tab counts
   const counts = {
     approve: tabBuckets.approve.length,
     update:  tabBuckets.update.length,
     solved:  tabBuckets.solved.length,
   };
 
-  // List for active tab + priority filter + sensible sort
+  // Active list with filter + sort
   const visibleRows = useMemo(() => {
     const base =
       activeTab === "approve" ? tabBuckets.approve :
@@ -135,20 +141,20 @@ export default function ManageIncidents() {
     const filtered = base.filter(r => priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter);
 
     filtered.sort((a, b) => {
-      // Overdue & higher status first (use weight within the subset)
-      const sw = statusWeight[b.status] - statusWeight[a.status];
+      const sw = statusWeight[b.status] - statusWeight[a.status]; // higher status weight first
       if (sw !== 0) return sw;
-      // Higher suggested priority next
-      const pw = priorityWeight[b.suggestedPriority] - priorityWeight[a.suggestedPriority];
+      const pw = priorityWeight[b.suggestedPriority] - priorityWeight[a.suggestedPriority]; // higher prio next
       if (pw !== 0) return pw;
-      // Higher SLA usage last
-      return (b.slaProgress ?? 0) - (a.slaProgress ?? 0);
+      return (b.slaProgress ?? 0) - (a.slaProgress ?? 0); // higher SLA usage last
     });
 
     return filtered;
   }, [activeTab, tabBuckets, priorityFilter]);
 
-  // Helpers
+  /**
+   * Map priority to pill styling and icon.
+   * @param p - Suggested priority.
+   */
   const prioPill = (p: Priority) =>
     p === "Urgent"
       ? { wrap: "bg-destructive/10 border-destructive/30", text: "text-destructive", Icon: AlertTriangle }
@@ -156,12 +162,17 @@ export default function ManageIncidents() {
       ? { wrap: "bg-ring/10 border-ring/30", text: "text-ring", Icon: Info }
       : { wrap: "bg-primary/10 border-primary/30", text: "text-primary", Icon: CheckCircle2 };
 
+  /**
+   * Resolve text tone by status.
+   * @param s - Incident status.
+   */
   const statusTone = (s: Status) =>
     s === "Overdue" ? "text-destructive"
       : s === "In Progress" ? "text-ring"
       : s === "Resolved" || s === "Closed" ? "text-muted-foreground"
       : "text-foreground";
 
+  /** Small filter chip. */
   const Chip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
     <Pressable
       onPress={onPress}
@@ -172,20 +183,22 @@ export default function ManageIncidents() {
     </Pressable>
   );
 
-  // Action toggles per row
+  // Inline panels + actions
   const toggleUpdatePanel = (id: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, showUpdate: !r.showUpdate, showMessage: false } : r)));
   const toggleMessagePanel = (id: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, showMessage: !r.showMessage, showUpdate: false } : r)));
-
   const approveRow = (id: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, status: "Approved", showUpdate: false } : r)));
-
   const setDraft = (id: string, text: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, messageDraft: text } : r)));
   const setNotify = (id: string, value: boolean) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, notifyCitizen: value } : r)));
 
+  /**
+   * Persist status change and optionally notify the citizen.
+   * Replace with API call; optimistic update shown here.
+   */
   const saveStatus = (id: string, newStatus: Status, notify: boolean, msg?: string) => {
     setRows(prev =>
       prev.map(r => (r.id === id ? { ...r, status: newStatus, showUpdate: false, notifyCitizen: false, messageDraft: "" } : r))
@@ -194,6 +207,10 @@ export default function ManageIncidents() {
     else toast.success("Status updated");
   };
 
+  /**
+   * Send a message to the citizen for a given row.
+   * Replace with API call; optimistic clear shown here.
+   */
   const sendMessage = (id: string, msg?: string) => {
     if (!msg || !msg.trim()) return;
     setRows(prev => prev.map(r => (r.id === id ? { ...r, showMessage: false, messageDraft: "" } : r)));
@@ -208,7 +225,7 @@ export default function ManageIncidents() {
     "Your report has been resolved. Thank you!",
   ];
 
-  // Tab button (segmented style)
+  /** Segmented tab button with count badge. */
   const TabButton = ({
     tab,
     label,
@@ -240,11 +257,10 @@ export default function ManageIncidents() {
     );
   };
 
-  // Action availability by tab
+  // Action availability
   const canShowApprove = (status: Status) => activeTab === "approve" && (status === "New" || status === "In Review");
-  const canShowUpdate = (status: Status) => activeTab === "update"; // update tab controls statuses
-  const canShowMessage = (status: Status) =>
-    activeTab === "approve" || activeTab === "update" || (activeTab === "solved" && status !== "Closed" ? true : true);
+  const canShowUpdate = (status: Status) => activeTab === "update"; // update controls exposed in Update tab
+  const canShowMessage = (_status: Status) => true; // messaging allowed in all tabs
 
   return (
     <KeyboardAwareScrollView
@@ -272,7 +288,7 @@ export default function ManageIncidents() {
             <View style={{ width: 56 }} />
           </View>
 
-          {/* Tabs */}
+          {/* Tabs + filters + list */}
           <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-4" style={animStyle}>
             <View className="flex-row gap-2">
               <TabButton tab="approve" label="Approve" count={counts.approve} Icon={BadgeCheck} />
@@ -280,7 +296,6 @@ export default function ManageIncidents() {
               <TabButton tab="solved"  label="Solved"  count={counts.solved}  Icon={CheckCircle} />
             </View>
 
-            {/* Priority filter */}
             <View>
               <Text className="text-xs text-foreground mb-1">Suggested priority</Text>
               <View className="flex-row flex-wrap gap-2">
@@ -290,7 +305,6 @@ export default function ManageIncidents() {
               </View>
             </View>
 
-            {/* List */}
             {visibleRows.length === 0 ? (
               <View className="bg-background rounded-xl border border-border p-6 items-center">
                 <View className="w-14 h-14 rounded-full items-center justify-center bg-ring/10">
@@ -309,7 +323,7 @@ export default function ManageIncidents() {
 
                   return (
                     <View key={r.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-2">
-                      {/* Header */}
+                      {/* Row header */}
                       <View className="flex-row items-start justify-between gap-2">
                         <View className="flex-1">
                           <Text className="text-foreground">{r.title}</Text>
@@ -326,7 +340,7 @@ export default function ManageIncidents() {
                         </View>
                       </View>
 
-                      {/* SLA progress (where available) */}
+                      {/* SLA progress */}
                       {typeof r.slaProgress === "number" ? (
                         <View className="mt-3">
                           <View className="h-2 rounded-full bg-primary/10 overflow-hidden">
@@ -341,9 +355,9 @@ export default function ManageIncidents() {
                         </View>
                       ) : null}
 
-                      {/* Actions (vary by tab) */}
+                      {/* Actions */}
                       <View className="flex-row items-center gap-2 mt-3">
-                        {/* Approve tab: Approve + Message */}
+                        {/* Approve tab */}
                         {activeTab === "approve" ? (
                           <>
                             <Button
@@ -377,7 +391,7 @@ export default function ManageIncidents() {
                           </>
                         ) : null}
 
-                        {/* Update tab: Update Status + Message */}
+                        {/* Update tab */}
                         {activeTab === "update" ? (
                           <>
                             <Button
@@ -405,7 +419,7 @@ export default function ManageIncidents() {
                           </>
                         ) : null}
 
-                        {/* Solved tab: Message only */}
+                        {/* Solved tab */}
                         {activeTab === "solved" ? (
                           <Button
                             size="sm"
@@ -420,7 +434,7 @@ export default function ManageIncidents() {
                         ) : null}
                       </View>
 
-                      {/* Inline Update Panel (only in Update tab) */}
+                      {/* Update Panel (Update tab) */}
                       {activeTab === "update" && r.showUpdate ? (
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Set status</Text>
@@ -474,7 +488,7 @@ export default function ManageIncidents() {
                         </View>
                       ) : null}
 
-                      {/* Inline Message Panel (all tabs) */}
+                      {/* Message Panel (all tabs) */}
                       {r.showMessage ? (
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Message citizen</Text>

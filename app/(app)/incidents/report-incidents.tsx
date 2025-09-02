@@ -2,12 +2,12 @@
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TextInput as RNTextInput } from "react-native";
+import type { NativeSyntheticEvent, TextInput as RNTextInput, TextInputContentSizeChangeEventData } from "react-native";
 import {
-    Animated,
-    Keyboard,
-    Pressable,
-    View,
+  Animated,
+  Keyboard,
+  Pressable,
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -18,38 +18,44 @@ import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 
 import {
-    AlertTriangle,
-    Car,
-    ChevronLeft,
-    ChevronRight,
-    FilePlus2,
-    Image as ImageIcon,
-    MapPin,
-    MoreHorizontal,
-    NotebookPen,
-    Phone,
-    ShieldOff,
-    ShieldPlus,
-    Trash2,
-    UserPlus,
-    UserRound,
+  AlertTriangle,
+  Car,
+  ChevronLeft,
+  ChevronRight,
+  FilePlus2,
+  Image as ImageIcon,
+  MapPin,
+  MoreHorizontal,
+  NotebookPen,
+  Phone,
+  ShieldOff,
+  ShieldPlus,
+  Trash2,
+  UserPlus,
+  UserRound,
 } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
 type Witness = { id: string; name: string; phone: string; expanded: boolean };
 
+/**
+ * Citizen incident report screen.
+ * - Collects category, location, description, and optional witnesses.
+ * - Performs lightweight client-side validation and shows inline guidance.
+ * - Stubs submission; replace with API integration when backend is ready.
+ */
 export default function ReportIncidents() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
 
-  // Safe back
+  // Safe back navigation (fallback to /home)
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
     else router.replace({ pathname: "/home", params: { role: resolvedRole } });
   }, [navigation, resolvedRole]);
 
-  // Subtle mount animation
+  // Entrance motion
   const mount = useRef(new Animated.Value(0.9)).current;
   useEffect(() => {
     Animated.spring(mount, {
@@ -73,6 +79,8 @@ export default function ReportIncidents() {
   const DESC_MAX = 500;
   const [desc, setDesc] = useState("");
   const [descHeight, setDescHeight] = useState(100);
+
+  /** Clamp description to DESC_MAX and update value. */
   const onChangeDesc = (v: string) => setDesc(v.slice(0, DESC_MAX));
 
   const [submitting, setSubmitting] = useState(false);
@@ -81,11 +89,17 @@ export default function ReportIncidents() {
   const [witnesses, setWitnesses] = useState<Witness[]>([]);
   const nameRefs = useRef<Record<string, RNTextInput | null>>({});
 
+  /** Strip non-digits and clamp to 10 chars. */
   const sanitizePhone = (v: string) => v.replace(/\D+/g, "").slice(0, 10);
+
+  /** Validate local phone format: 10 digits starting with 0. */
   const isValidPhone = (v: string) => /^0\d{9}$/.test(v);
+
+  /** Format phone for display: 000 000 0000. */
   const formatPhoneDisplay = (v: string) =>
     /^0\d{9}$/.test(v) ? v.replace(/(\d{3})(\d{3})(\d{4})/, "$1 $2 $3") : v;
 
+  // Duplicate phone detection across witnesses
   const phoneCounts = useMemo(() => {
     const map: Record<string, number> = {};
     witnesses.forEach((w) => {
@@ -122,7 +136,7 @@ export default function ReportIncidents() {
   const doneEdit = (id: string) => {
     const w = witnesses.find((x) => x.id === id);
     if (!w) return;
-    if (w.name.trim().length === 0 || !isValidPhone(w.phone)) return; // keep expanded; show helper
+    if (w.name.trim().length === 0 || !isValidPhone(w.phone)) return; // keep expanded until valid
     toggleExpanded(id, false);
     toast.success("Witness saved");
   };
@@ -138,6 +152,10 @@ export default function ReportIncidents() {
     }
   };
 
+  /**
+   * Submit incident (stub).
+   * Replace with API call and error handling.
+   */
   const onSubmit = async () => {
     if (!canSubmit) return;
     try {
@@ -150,8 +168,14 @@ export default function ReportIncidents() {
     }
   };
 
-  // Category chips
-  const CategoryChip = ({ value, Icon }: { value: typeof category; Icon: any }) => {
+  /** Category chip control. */
+  const CategoryChip = ({
+    value,
+    Icon,
+  }: {
+    value: typeof category;
+    Icon: React.ComponentType<{ size?: number; color?: string }>;
+  }) => {
     const active = category === value;
     return (
       <Pressable
@@ -224,7 +248,7 @@ export default function ReportIncidents() {
               </View>
             </View>
 
-            {/* Description (auto-grow + counter) */}
+            {/* Description */}
             <View className="gap-1">
               <Label nativeID="descLabel" className="text-xs">
                 <Text className="text-xs text-foreground">Description</Text>
@@ -235,7 +259,7 @@ export default function ReportIncidents() {
                   aria-labelledby="descLabel"
                   value={desc}
                   onChangeText={onChangeDesc}
-                  onContentSizeChange={(e: any) => {
+                  onContentSizeChange={(e: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
                     const h = e?.nativeEvent?.contentSize?.height ?? 100;
                     setDescHeight(Math.max(100, Math.min(h, 220)));
                   }}
@@ -254,13 +278,13 @@ export default function ReportIncidents() {
               </View>
             </View>
 
-            {/* Attachment */}
+            {/* Attachment (stub) */}
             <View className="bg-background rounded-xl border border-border p-3 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
                 <ImageIcon size={18} color="#0F172A" />
                 <Text className="text-foreground">Attach photo (optional)</Text>
               </View>
-              <Button size="sm" variant="secondary" onPress={() => {}}>
+              <Button size="sm" variant="secondary" onPress={() => { /* TODO: open picker */ }}>
                 <View className="flex-row items-center gap-1">
                   <FilePlus2 size={14} color="#0F172A" />
                   <Text className="text-foreground">Choose</Text>
@@ -288,7 +312,11 @@ export default function ReportIncidents() {
   );
 }
 
-/** Witness section */
+/**
+ * Witness collection section.
+ * - Manages add/edit/remove of witness entries with basic validation.
+ * - Limits to five witnesses and flags duplicate phone numbers.
+ */
 function WitnessSection({
   witnesses,
   setWitnesses,

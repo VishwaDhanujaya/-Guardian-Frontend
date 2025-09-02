@@ -8,7 +8,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  View
+  View,
 } from "react-native";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
   ChevronRight,
   ClipboardList,
   Clock,
-  FileText,
   Inbox,
   LayoutDashboard,
   Megaphone,
@@ -40,7 +39,7 @@ type Role = "citizen" | "officer";
 type IconType = React.ComponentType<{ size?: number; color?: string }>;
 type Tone = "primary" | "ring" | "accent" | "destructive" | "foreground";
 
-/** Tailwind class maps */
+/** Tailwind tone → class maps (BG/Text variants and faint BG) */
 const TONE_BG: Record<Tone, string> = {
   primary: "bg-primary",
   ring: "bg-ring",
@@ -63,11 +62,17 @@ const TONE_BG_FAINT: Record<Tone, string> = {
   foreground: "bg-foreground/10",
 };
 
+/**
+ * Role-aware dashboard screen.
+ * - Renders citizen/officer home with mock data and subtle entrance animations.
+ * - Provides quick navigation to incidents flows and common actions.
+ * - NOTE: Replace hardcoded “Alex” with profile data when available.
+ */
 export default function Home() {
   const params = useLocalSearchParams<{ role?: string }>();
-  const role = (params.role === "officer" ? "officer" : "citizen") as Role;
+  const role: Role = params.role === "officer" ? "officer" : "citizen";
 
-  // Greeting + date
+  // Greeting + date (local)
   const now = new Date();
   const greeting = getGreeting(now.getHours());
   const dateStr = now.toLocaleDateString(undefined, {
@@ -76,11 +81,8 @@ export default function Home() {
     day: "numeric",
   });
 
-  // Mock overview + counts
-  const overview = useMemo(
-    () => ({ activeReports: 8, remainingToday: 3, pendingCases: 5 }),
-    []
-  );
+  // Overview + counts (mock)
+  const overview = useMemo(() => ({ activeReports: 8, remainingToday: 3, pendingCases: 5 }), []);
   const counts = useMemo(
     () =>
       role === "officer"
@@ -89,7 +91,7 @@ export default function Home() {
     [role]
   );
 
-  // Mock data
+  // Lists (mock)
   const citizenAlertsAll = useMemo(
     () => [
       { id: "a1", title: "Road closure at Main St", meta: "Until 6 PM", icon: AlertTriangle, tone: "destructive" as Tone, category: "Road" },
@@ -100,7 +102,7 @@ export default function Home() {
   );
   const citizenRecentAll = useMemo(
     () => [
-      { id: "r1", title: "Reported: Streetlight outage", meta: "2h ago · #1245", icon: FileText, tone: "primary" as Tone },
+      { id: "r1", title: "Reported: Streetlight outage", meta: "2h ago · #1245", icon: PackageSearch, tone: "primary" as Tone },
       { id: "r2", title: "Found item: Wallet", meta: "Yesterday", icon: PackageSearch, tone: "accent" as Tone },
       { id: "r3", title: "Alert viewed: Rain advisory", meta: "Yesterday", icon: BellRing, tone: "ring" as Tone },
     ],
@@ -109,7 +111,7 @@ export default function Home() {
   const officerQueueAll = useMemo(
     () => [
       { id: "q1", title: "Overdue: Traffic accident", meta: "High · 1h", icon: AlertTriangle, tone: "destructive" as Tone, category: "Overdue" },
-      { id: "q2", title: "New: Vandalism report", meta: "Medium · 10m", icon: FileText, tone: "primary" as Tone, category: "New" },
+      { id: "q2", title: "New: Vandalism report", meta: "Medium · 10m", icon: PackageSearch, tone: "primary" as Tone, category: "New" },
       { id: "q3", title: "Lost item: Phone", meta: "Low · 5m", icon: PackageSearch, tone: "accent" as Tone, category: "Lost" },
     ],
     []
@@ -146,7 +148,7 @@ export default function Home() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
 
-  // Pull-to-refresh
+  // Pull-to-refresh (mock)
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -155,14 +157,14 @@ export default function Home() {
 
   const onSignOut = () => router.replace("/login");
 
-  // KPI trends
+  // KPI trends (mock)
   const trends = {
-    activeReports: { dir: "up" as "up" | "down", pct: 12, tone: "ring" as Tone },
-    remainingToday: { dir: "down" as "up" | "down", pct: 5, tone: "primary" as Tone, progress: 70 },
-    pendingCases: { dir: "up" as "up" | "down", pct: 3, tone: "destructive" as Tone },
+    activeReports: { dir: "up" as const, pct: 12, tone: "ring" as Tone },
+    remainingToday: { dir: "down" as const, pct: 5, tone: "primary" as Tone, progress: 70 },
+    pendingCases: { dir: "up" as const, pct: 3, tone: "destructive" as Tone },
   };
 
-  // ---------- Subtle mount animations for header + sections ----------
+  // Entrance animations
   const headerAnim = useRef(new Animated.Value(0.9)).current;
   const sectionAnims = useRef([0, 1, 2, 3].map(() => new Animated.Value(0.9))).current;
 
@@ -175,7 +177,6 @@ export default function Home() {
       useNativeDriver: true,
     }).start();
 
-    // Stagger in the sections
     Animated.stagger(
       90,
       sectionAnims.map((a) =>
@@ -195,6 +196,10 @@ export default function Home() {
     transform: [{ translateY: v.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   });
 
+  // Navigation helpers
+  const goCitizenReport = () => router.push({ pathname: "/incidents/report-incidents", params: { role } });
+  const goOfficerManage = () => router.push({ pathname: "/incidents/manage-incidents", params: { role } });
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.select({ ios: "padding", android: undefined })}
@@ -213,7 +218,7 @@ export default function Home() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-1 justify-between gap-6">
-            {/* Header + Hero (nudged down to match auth screens) */}
+            {/* Header + hero */}
             <Animated.View style={animStyle(headerAnim)}>
               <View className="pt-10">
                 <View className="flex-row items-center justify-between">
@@ -226,7 +231,6 @@ export default function Home() {
                   </View>
                 </View>
 
-                {/* Alerts Banner (conditional) */}
                 {showBanner ? (
                   <View className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 flex-row items-center gap-2">
                     <AlertTriangle size={16} color="#DC2626" />
@@ -236,7 +240,6 @@ export default function Home() {
                   </View>
                 ) : null}
 
-                {/* Hero: greeting + date */}
                 <View className="bg-primary/5 border border-border rounded-2xl px-4 py-3 mt-3">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1">
@@ -256,7 +259,7 @@ export default function Home() {
               </View>
             </Animated.View>
 
-            {/* Main */}
+            {/* Main sections */}
             <View className="gap-6">
               {role === "officer" ? (
                 <>
@@ -276,7 +279,7 @@ export default function Home() {
                       <CardHeader title="Manage" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Manage incidents", icon: Shield, onPress: () => router.push({ pathname: "/incidents", params: { role } }), count: counts.incidents },
+                          { label: "Manage incidents", icon: Shield, onPress: goOfficerManage, count: counts.incidents },
                           { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
                           { label: "Safety alerts", icon: BellRing, onPress: () => {}, count: counts.alerts },
                           { label: "Case overview", icon: ClipboardList, onPress: () => {}, variant: "secondary", count: counts.cases },
@@ -287,7 +290,7 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[2])}>
                     <Card>
-                      <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={() => {}} />
+                      <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={goOfficerManage} />
                       <FilterChips
                         options={["All", "Overdue", "New", "Lost"]}
                         active={queueFilter}
@@ -327,7 +330,7 @@ export default function Home() {
                       <CardHeader title="Quick actions" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Report incident", icon: ShieldPlus, onPress: () => router.push({ pathname: "/incidents", params: { role } }) },
+                          { label: "Report incident", icon: ShieldPlus, onPress: goCitizenReport },
                           { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
                           { label: "My reports", icon: ClipboardList, onPress: () => {}, count: counts.myReports },
                           { label: "Safety alerts", icon: BellRing, onPress: () => {}, variant: "secondary", count: counts.alerts },
@@ -374,7 +377,6 @@ export default function Home() {
               )}
             </View>
 
-            {/* Footer action */}
             <View>
               <Button onPress={onSignOut} size="lg" className="h-12 rounded-xl">
                 <Text className="font-semibold text-primary-foreground">Sign out</Text>
@@ -383,7 +385,6 @@ export default function Home() {
           </View>
         </ScrollView>
 
-        {/* Chatbot only for CITIZEN (icon FAB) */}
         {role === "citizen" ? (
           <ChatbotWidget
             open={chatOpen}
@@ -397,30 +398,41 @@ export default function Home() {
   );
 }
 
-/** -------------------- Helpers -------------------- **/
-function getGreeting(hour: number) {
+/**
+ * Return a local greeting for the given hour.
+ * @param hour - 0–23 hour in local time.
+ */
+function getGreeting(hour: number): "Good morning" | "Good afternoon" | "Good evening" {
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
 }
 
-/** -------------------- UI Partials -------------------- **/
+/* -------------------- UI Partials -------------------- */
 
+/** Card container with standard padding, border, and rounded corners. */
 const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <View className="bg-muted rounded-2xl border border-border p-5">{children}</View>
 );
 
-const CardHeader: React.FC<{ title: string; actionLabel?: string; onAction?: () => void; tone?: Tone }> = ({
-  title,
-  actionLabel,
-  onAction,
-  tone = "foreground",
-}) => (
+/**
+ * Section header with title, optional action, and tone bar.
+ * @param title - Section title.
+ * @param actionLabel - Optional action text.
+ * @param onAction - Action handler.
+ * @param tone - Accent tone for the underline bar.
+ */
+const CardHeader: React.FC<{
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  tone?: Tone;
+}> = ({ title, actionLabel, onAction, tone = "foreground" }) => (
   <View>
     <View className="flex-row items-center justify-between">
       <Text className="text-lg font-semibold text-foreground">{title}</Text>
       {actionLabel ? (
-        <Pressable onPress={onAction} className="flex-row items-center gap-1">
+        <Pressable onPress={onAction} className="flex-row items-center gap-1" android_ripple={{ color: "rgba(0,0,0,0.06)" }}>
           <Text className="text-primary">{actionLabel}</Text>
           <ChevronRight size={14} color="#2563EB" />
         </Pressable>
@@ -430,6 +442,12 @@ const CardHeader: React.FC<{ title: string; actionLabel?: string; onAction?: () 
   </View>
 );
 
+/**
+ * Compact trend chip (up/down + %).
+ * @param dir - Direction of change.
+ * @param pct - Percent change.
+ * @param tone - Visual tone.
+ */
 const TrendChip: React.FC<{ dir: "up" | "down"; pct: number; tone: Tone }> = ({ dir, pct, tone }) => (
   <View className={`flex-row items-center gap-1 px-2 py-0.5 rounded-full ${TONE_BG_FAINT[tone]}`}>
     {dir === "up" ? <TrendingUp size={12} color="#0F172A" /> : <TrendingDown size={12} color="#0F172A" />}
@@ -437,6 +455,13 @@ const TrendChip: React.FC<{ dir: "up" | "down"; pct: number; tone: Tone }> = ({ 
   </View>
 );
 
+/**
+ * KPI block with optional trend and progress bar.
+ * @param label - KPI label.
+ * @param value - KPI value.
+ * @param tone - Accent tone.
+ * @param trend - Optional trend meta.
+ */
 const Kpi: React.FC<{
   label: string;
   value: number | string;
@@ -469,6 +494,10 @@ type Tile = {
   count?: number;
 };
 
+/**
+ * Responsive 2-column grid of action tiles.
+ * @param tiles - Tile definitions.
+ */
 const TileGrid: React.FC<{ tiles: Tile[] }> = ({ tiles }) => (
   <View className="flex-row flex-wrap -mx-1 mt-3">
     {tiles.map((t, i) => (
@@ -479,6 +508,14 @@ const TileGrid: React.FC<{ tiles: Tile[] }> = ({ tiles }) => (
   </View>
 );
 
+/**
+ * Action tile button with optional count badge.
+ * @param label - Tile label.
+ * @param icon - Icon component.
+ * @param onPress - Press handler.
+ * @param variant - Visual variant.
+ * @param count - Optional numeric badge.
+ */
 const IconTileButton: React.FC<Tile> = ({ label, icon: IconCmp, onPress, variant = "default", count }) => {
   const isSecondary = variant === "secondary";
   const iconColor = isSecondary ? "#0F172A" : "#FFFFFF";
@@ -509,6 +546,13 @@ const IconTileButton: React.FC<Tile> = ({ label, icon: IconCmp, onPress, variant
 
 type ListItem = { id: string; title: string; meta?: string; icon: IconType; tone: Tone; category?: string };
 
+/**
+ * Empty state block used by list/timeline components.
+ * @param title - Primary message.
+ * @param subtitle - Optional secondary message.
+ * @param icon - Optional icon (defaults to Inbox).
+ * @param tone - Visual tone for icon background.
+ */
 const EmptyState: React.FC<{
   title: string;
   subtitle?: string;
@@ -524,6 +568,10 @@ const EmptyState: React.FC<{
   </View>
 );
 
+/**
+ * Generic list of items with icon, title, and meta.
+ * Falls back to an empty state when no items are provided.
+ */
 const List: React.FC<{
   items: ListItem[];
   className?: string;
@@ -562,6 +610,13 @@ const List: React.FC<{
   );
 };
 
+/**
+ * Filter chip row.
+ * @param options - Available filter values.
+ * @param active - Current active value.
+ * @param onChange - Change handler.
+ * @param tone - Visual tone for active chip.
+ */
 const FilterChips: React.FC<{
   options: string[];
   active: string;
@@ -579,6 +634,7 @@ const FilterChips: React.FC<{
           className={`px-3 py-1 rounded-full border ${
             isActive ? `${TONE_BG_FAINT[tone]} border-transparent` : "bg-background border-border"
           }`}
+          android_ripple={{ color: "rgba(0,0,0,0.06)" }}
         >
           <Text className={`text-xs ${isActive ? TONE_TEXT[tone] : "text-muted-foreground"}`}>{opt}</Text>
         </Pressable>
@@ -587,6 +643,10 @@ const FilterChips: React.FC<{
   </View>
 );
 
+/**
+ * Vertical timeline of recent items with a guiding line and bullets.
+ * Falls back to an empty state when no items are provided.
+ */
 const Timeline: React.FC<{
   items: ListItem[];
   className?: string;
@@ -624,7 +684,10 @@ const Timeline: React.FC<{
   );
 };
 
-/** -------------------- Chatbot Widget (citizen only) -------------------- **/
+/**
+ * Floating chatbot widget (citizen only).
+ * - Collapsed FAB toggles an inline chat panel with input and send action.
+ */
 const ChatbotWidget: React.FC<{
   open: boolean;
   onToggle: () => void;
@@ -649,9 +712,6 @@ const ChatbotWidget: React.FC<{
             <MessageSquare size={22} color="#0F172A" />
             <Text className="font-semibold text-foreground">Chatbot</Text>
           </View>
-          <Pressable onPress={onToggle} className="px-2 py-1">
-            <Text className="text-primary">Close</Text>
-          </Pressable>
         </View>
 
         <View className="p-4">
