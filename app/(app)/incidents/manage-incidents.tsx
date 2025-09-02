@@ -74,7 +74,7 @@ export default function ManageIncidents() {
   const [rows, setRows] = useState<Row[]>([
     { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "1h ago", slaProgress: 95 },
     { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "New",         suggestedPriority: "Normal", reportedAgo: "12m ago", slaProgress: 10 },
-    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  slaProgress: 40 },
+    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar .",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  slaProgress: 40 },
     { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "New",         suggestedPriority: "Low",    reportedAgo: "3m ago",  slaProgress: 5  },
     { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "2h ago", slaProgress: 98 },
     { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review",   suggestedPriority: "Normal", reportedAgo: "8m ago",  slaProgress: 15 },
