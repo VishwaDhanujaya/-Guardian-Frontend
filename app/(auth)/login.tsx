@@ -30,6 +30,12 @@ import {
 
 type Role = "citizen" | "officer";
 
+/**
+ * Login screen for Guardian.
+ * - Roles: Citizen (email) and Officer (numeric ID).
+ * - Animated role switcher and form transitions.
+ * - Basic validation + navigation stubs.
+ */
 export default function Login() {
   const [tab, setTab] = useState<Role>("citizen");
   const [identifier, setIdentifier] = useState("");
@@ -38,17 +44,15 @@ export default function Login() {
 
   const isOfficer = tab === "officer";
   const canContinue = identifier.trim().length > 0 && password.length >= 6;
-
   const passwordRef = useRef<any>(null);
 
-  // ── Animations ──────────────────────────────────────────────────────────────
-  const roleAnim = useRef(new Animated.Value(0)).current; // 0=citizen, 1=officer
+  // Animations
+  const roleAnim = useRef(new Animated.Value(0)).current; // 0 = citizen, 1 = officer
   const formSwitchAnim = useRef(new Animated.Value(1)).current;
-  const textSwitchAnim = useRef(new Animated.Value(1)).current; // for label text
+  const textSwitchAnim = useRef(new Animated.Value(1)).current;
   const [railW, setRailW] = useState(0);
 
   useEffect(() => {
-    // pill slide
     Animated.timing(roleAnim, {
       toValue: isOfficer ? 1 : 0,
       duration: 220,
@@ -56,7 +60,6 @@ export default function Login() {
       useNativeDriver: true,
     }).start();
 
-    // form fade/slide
     formSwitchAnim.setValue(0.9);
     Animated.spring(formSwitchAnim, {
       toValue: 1,
@@ -66,7 +69,6 @@ export default function Login() {
       useNativeDriver: true,
     }).start();
 
-    // label cross-fade/slide
     textSwitchAnim.setValue(0);
     Animated.timing(textSwitchAnim, {
       toValue: 1,
@@ -76,20 +78,31 @@ export default function Login() {
     }).start();
   }, [isOfficer, formSwitchAnim, roleAnim, textSwitchAnim]);
 
+  // Derived animated values
   const tabWidth = railW > 0 ? railW / 2 : 0;
   const indicatorTX = roleAnim.interpolate({ inputRange: [0, 1], outputRange: [0, tabWidth] });
   const formOpacity = formSwitchAnim.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] });
   const formTranslateY = formSwitchAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });
-  const labelOpacity = textSwitchAnim; // 0→1
+  const labelOpacity = textSwitchAnim;
   const labelTranslateY = textSwitchAnim.interpolate({ inputRange: [0, 1], outputRange: [4, 0] });
 
-  // ── Sanitizers & Handlers ───────────────────────────────────────────────────
-  const sanitizeIdentifier = (value: string) => {
-    if (isOfficer) return value.replace(/\D+/g, ""); // digits only
-    return value.trim().replace(/\s+/g, " ");
+  /**
+   * Normalize identifier by role.
+   * - Officer: strip non-digits.
+   * - Citizen: collapse internal whitespace and trim.
+   * @param value - Raw identifier string.
+   * @returns Sanitized identifier.
+   */
+  const sanitizeIdentifier = (value: string): string => {
+    return isOfficer ? value.replace(/\D+/g, "") : value.trim().replace(/\s+/g, " ");
   };
 
-  const onSignIn = () => {
+  /**
+   * Handle sign-in flow.
+   * - Applies sanitization.
+   * - Navigates to MFA for officers or home for citizens.
+   */
+  const onSignIn = (): void => {
     const safeId = sanitizeIdentifier(identifier);
     if (safeId !== identifier) setIdentifier(safeId);
 
@@ -109,13 +122,12 @@ export default function Login() {
       keyboardShouldPersistTaps="handled"
       extraScrollHeight={80}
       onScrollBeginDrag={Keyboard.dismiss}
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}            // keep full-page background WHITE
+      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
       contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF" }}
     >
       <View className="flex-1 p-5">
-        {/* Centered stack (nudged downward) */}
         <View className="flex-1 justify-center pt-10 pb-6">
-          {/* Header: big logo, then title, then subtitle */}
+          {/* Header */}
           <View className="items-center mb-5">
             <Image
               source={Logo}
@@ -128,17 +140,16 @@ export default function Login() {
             </Text>
           </View>
 
-          {/* Form card (Animated) */}
+          {/* Form */}
           <Animated.View
             className="bg-muted rounded-2xl border border-border p-4 gap-4"
             style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}
           >
-            {/* Segmented control rail (inside card) */}
+            {/* Role switcher */}
             <View
               onLayout={(e) => setRailW(e.nativeEvent.layout.width)}
               className="bg-background rounded-xl border border-border p-1 overflow-hidden"
             >
-              {/* Black sliding pill for active tab */}
               {tabWidth > 0 ? (
                 <Animated.View
                   pointerEvents="none"
@@ -149,13 +160,12 @@ export default function Login() {
                     width: tabWidth - 4,
                     height: 36,
                     borderRadius: 10,
-                    backgroundColor: "#0F172A", // black pill
+                    backgroundColor: "#0F172A",
                     transform: [{ translateX: indicatorTX }],
                   }}
                 />
               ) : null}
 
-              {/* Tabs layer */}
               <View className="flex-row">
                 <SegTab
                   active={!isOfficer}
@@ -172,7 +182,7 @@ export default function Login() {
               </View>
             </View>
 
-            {/* Identifier */}
+            {/* Identifier input */}
             <View className="gap-1">
               <Label nativeID="identifierLabel" className="text-xs">
                 <Animated.Text
@@ -207,7 +217,7 @@ export default function Login() {
               </View>
             </View>
 
-            {/* Password */}
+            {/* Password input */}
             <View className="gap-1">
               <View className="flex-row items-center justify-between">
                 <Label nativeID="passwordLabel" className="text-xs">
@@ -232,7 +242,6 @@ export default function Login() {
                   placeholder="••••••••"
                   className="bg-background h-12 rounded-xl pl-9 pr-12"
                 />
-                {/* Icon-only toggle (black icon) */}
                 <Pressable
                   onPress={() => setShowPw((v) => !v)}
                   accessibilityLabel={showPw ? "Hide password" : "Show password"}
@@ -253,7 +262,7 @@ export default function Login() {
               </View>
             </View>
 
-            {/* Sign in */}
+            {/* Submit */}
             <Button
               onPress={onSignIn}
               size="lg"
@@ -265,7 +274,7 @@ export default function Login() {
             </Button>
           </Animated.View>
 
-          {/* Bottom actions (centered + consistent spacing) */}
+          {/* Footer */}
           <View className="items-center mt-4">
             {!isOfficer ? (
               <Button variant="link" onPress={() => router.push("/register")} className="h-auto p-0">
@@ -285,7 +294,13 @@ export default function Login() {
   );
 }
 
-/** Segmented tab: active = black pill (white text/icon), inactive = muted on white */
+/**
+ * Segmented control tab.
+ * @param active - Whether this tab is currently active.
+ * @param label - Text label displayed for the tab.
+ * @param icon - Icon component rendered next to the label.
+ * @param onPress - Press handler for selecting the tab.
+ */
 function SegTab({
   active,
   label,
