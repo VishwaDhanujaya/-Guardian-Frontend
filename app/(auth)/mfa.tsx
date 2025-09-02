@@ -18,6 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 
+/**
+ * MFA verification screen.
+ * - Accepts a 6-digit OTP and verifies user session.
+ * - Mirrors the motion/visual language used in Login/Register.
+ * - Supports officer vs. citizen copy via `role` query param.
+ */
 export default function Mfa() {
   const { role } = useLocalSearchParams<{ role?: string }>(); // "officer" | undefined
   const [code, setCode] = useState("");
@@ -26,7 +32,11 @@ export default function Mfa() {
 
   const isValid = code.length === 6;
 
-  const onVerify = () => {
+  /**
+   * Verify the provided code and navigate on success.
+   * Uses a demo code for now; replace with backend validation.
+   */
+  const onVerify = (): void => {
     if (code === "123456") {
       toast.success("Verified");
       router.replace({
@@ -38,25 +48,34 @@ export default function Mfa() {
     }
   };
 
-  const onChangeCode = (v: string) => {
+  /**
+   * Accept numeric input only; clamp to 6 chars.
+   * @param v - Raw input value from the text field.
+   */
+  const onChangeCode = (v: string): void => {
     const next = v.replace(/\D/g, "").slice(0, 6);
     setCode(next);
   };
 
-  const onResend = () => {
+  /**
+   * Trigger a resend and start cooldown timer.
+   * No-op when cooldown is active.
+   */
+  const onResend = (): void => {
     if (cooldown > 0) return;
     setCooldown(30);
     setCode("");
     toast.info("New code sent (demo: 123456)");
   };
 
+  // Cooldown timer
   useEffect(() => {
     if (cooldown <= 0) return;
     const id = setInterval(() => setCooldown((s) => (s > 1 ? s - 1 : 0)), 1000);
     return () => clearInterval(id);
   }, [cooldown]);
 
-  // Animations: match Login/Register feel
+  // Motion: form entrance + subtitle cross-fade
   const formAnim = useRef(new Animated.Value(0.9)).current;
   const subtitleAnim = useRef(new Animated.Value(1)).current;
 
@@ -71,7 +90,6 @@ export default function Mfa() {
   }, [formAnim]);
 
   useEffect(() => {
-    // cross-fade/slide subtitle when role-based copy changes
     subtitleAnim.setValue(0);
     Animated.timing(subtitleAnim, {
       toValue: 1,
@@ -81,6 +99,7 @@ export default function Mfa() {
     }).start();
   }, [role, subtitleAnim]);
 
+  // Derived animated values
   const formOpacity = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] });
   const formTranslateY = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });
   const subtitleOpacity = subtitleAnim;
@@ -96,9 +115,8 @@ export default function Mfa() {
       contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF" }}
     >
       <View className="flex-1 p-5">
-        {/* Centered content (nudged down for balance) */}
         <View className="flex-1 justify-center pt-10 pb-6">
-          {/* Header: big logo → title → subtitle */}
+          {/* Header */}
           <View className="items-center mb-5">
             <Image
               source={Logo}
@@ -118,12 +136,12 @@ export default function Mfa() {
             </Animated.Text>
           </View>
 
-          {/* Form card */}
+          {/* Form */}
           <Animated.View
             className="bg-muted rounded-2xl border border-border p-4 gap-4"
             style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}
           >
-            {/* Code */}
+            {/* Code input */}
             <View className="gap-1">
               <Label nativeID="codeLabel" className="text-xs">
                 <Text className="text-xs text-foreground">6-digit code</Text>
@@ -138,8 +156,6 @@ export default function Mfa() {
                 keyboardType="number-pad"
                 returnKeyType="done"
                 onSubmitEditing={onVerify}
-                // Keep the caret centered from the start:
-                // hide placeholder while focused to avoid the Android caret-on-right bug
                 placeholder={isFocused ? "" : "123456"}
                 placeholderTextColor="#94A3B8"
                 textContentType="oneTimeCode"
@@ -149,7 +165,6 @@ export default function Mfa() {
                   textAlign: "center",
                   letterSpacing: Platform.OS === "ios" ? 8 : 6,
                   textAlignVertical: "center",
-                  // monospace helps spacing look even across platforms
                   fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: undefined }),
                 }}
               />
@@ -166,7 +181,7 @@ export default function Mfa() {
               <Text className="font-semibold text-primary-foreground">Verify</Text>
             </Button>
 
-            {/* Resend under the Verify button */}
+            {/* Resend */}
             <View className="flex-row items-center justify-center mt-1">
               <Text className="text-xs text-muted-foreground">Didn&apos;t receive a code?</Text>
               <Button
@@ -182,7 +197,7 @@ export default function Mfa() {
             </View>
           </Animated.View>
 
-          {/* Back to login (centered) */}
+          {/* Back to login */}
           <View className="items-center mt-4">
             <Button variant="link" onPress={() => router.replace("/login")} className="h-auto p-0">
               <Text className="text-sm text-primary">Back to login</Text>

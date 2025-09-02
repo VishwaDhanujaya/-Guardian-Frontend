@@ -1,12 +1,7 @@
 // app/(auth)/register.tsx
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Image,
-  Keyboard,
-  View
-} from "react-native";
+import { Animated, Image, Keyboard, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import Logo from "@/assets/images/icon.png";
@@ -15,34 +10,46 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
-
 import { Lock, Mail, UserRound } from "lucide-react-native";
 
+/**
+ * Citizen account registration screen.
+ * - Collects first/last name, email, and password.
+ * - Basic client-side validation (length, match).
+ * - Navigates to Login after successful submission (stub).
+ */
 export default function Register() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPw, setShowPw] = useState(false); // single toggle for both fields
+  const [showPw, setShowPw] = useState(false);
 
   // Focus chain
+  const lastNameRef = useRef<any>(null);
   const emailRef = useRef<any>(null);
   const passwordRef = useRef<any>(null);
   const confirmRef = useRef<any>(null);
 
   const canSubmit =
-    name.trim().length > 1 &&
+    firstName.trim().length > 1 &&
+    lastName.trim().length > 1 &&
     email.trim().length > 3 &&
     password.length >= 6 &&
     confirm === password;
 
-  const onSignUp = () => {
+  /**
+   * Submit registration (stub).
+   * Replace with API integration and error handling as needed.
+   */
+  const onSignUp = (): void => {
     if (!canSubmit) return;
     toast.success("Account created");
     router.replace("/login");
   };
 
-  // Smooth form fade/slide (consistency with Login)
+  // Entrance motion for form
   const formAnim = useRef(new Animated.Value(0.9)).current;
   useEffect(() => {
     Animated.spring(formAnim, {
@@ -57,9 +64,10 @@ export default function Register() {
   const formOpacity = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] });
   const formTranslateY = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });
 
-  // Sanitizers on blur (consistency with Login behavior)
-  const sanitizeName = (v: string) => v.trim().replace(/\s+/g, " ");
-  const sanitizeEmail = (v: string) => v.trim().replace(/\s+/g, " ");
+  /**
+   * Normalize name/email inputs.
+   */
+  const sanitize = (v: string): string => v.trim().replace(/\s+/g, " ");
 
   return (
     <KeyboardAwareScrollView
@@ -67,13 +75,12 @@ export default function Register() {
       keyboardShouldPersistTaps="handled"
       extraScrollHeight={80}
       onScrollBeginDrag={Keyboard.dismiss}
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}           // keep full-page background WHITE
+      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
       contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF" }}
     >
       <View className="flex-1 p-5">
-        {/* Centered main content (nudged downward to match Login) */}
         <View className="flex-1 justify-center pt-10 pb-6">
-          {/* Header: big logo + title + subtitle (consistent with Login) */}
+          {/* Header */}
           <View className="items-center mb-5">
             <Image
               source={Logo}
@@ -81,27 +88,51 @@ export default function Register() {
               resizeMode="contain"
             />
             <Text className="mt-3 text-3xl font-bold text-foreground">Create account</Text>
-            <Text className="text-sm text-muted-foreground mt-1 text-center">Citizen sign up</Text>
+            <Text className="text-sm text-muted-foreground mt-1 text-center">
+              Citizen sign up
+            </Text>
           </View>
 
-          {/* Form card */}
+          {/* Form */}
           <Animated.View
             className="bg-muted rounded-2xl border border-border p-4 gap-4"
             style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}
           >
-            {/* Full name */}
+            {/* First name */}
             <View className="gap-1">
-              <Label nativeID="nameLabel" className="text-xs">
-                <Text className="text-xs text-foreground">Full name</Text>
+              <Label nativeID="firstNameLabel" className="text-xs">
+                <Text className="text-xs text-foreground">First name</Text>
               </Label>
               <View className="relative">
                 <UserRound size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 14 }} />
                 <Input
-                  aria-labelledby="nameLabel"
-                  value={name}
-                  onChangeText={setName}
-                  onBlur={() => setName((v) => sanitizeName(v))}
-                  placeholder="Alex Johnson"
+                  aria-labelledby="firstNameLabel"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  onBlur={() => setFirstName((v) => sanitize(v))}
+                  placeholder="Alex"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => lastNameRef.current?.focus()}
+                  className="bg-background h-12 rounded-xl pl-9"
+                />
+              </View>
+            </View>
+
+            {/* Last name */}
+            <View className="gap-1">
+              <Label nativeID="lastNameLabel" className="text-xs">
+                <Text className="text-xs text-foreground">Last name</Text>
+              </Label>
+              <View className="relative">
+                <UserRound size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 14 }} />
+                <Input
+                  ref={lastNameRef}
+                  aria-labelledby="lastNameLabel"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  onBlur={() => setLastName((v) => sanitize(v))}
+                  placeholder="Johnson"
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onSubmitEditing={() => emailRef.current?.focus()}
@@ -122,7 +153,7 @@ export default function Register() {
                   aria-labelledby="emailLabel"
                   value={email}
                   onChangeText={setEmail}
-                  onBlur={() => setEmail((v) => sanitizeEmail(v))}
+                  onBlur={() => setEmail((v) => sanitize(v))}
                   autoCapitalize="none"
                   autoComplete="email"
                   keyboardType="email-address"
@@ -179,7 +210,7 @@ export default function Register() {
                 />
               </View>
 
-              {/* Single toggle under confirm field (consistent with your preference) */}
+              {/* Password visibility toggle */}
               <View className="items-end mt-1">
                 <Button
                   variant="link"
@@ -194,7 +225,7 @@ export default function Register() {
               </View>
             </View>
 
-            {/* Create account */}
+            {/* Submit */}
             <Button
               onPress={onSignUp}
               size="lg"
@@ -206,7 +237,7 @@ export default function Register() {
             </Button>
           </Animated.View>
 
-          {/* Back to login (centered + consistent spacing) */}
+          {/* Back to login */}
           <View className="items-center mt-4">
             <Button variant="link" onPress={() => router.replace("/login")} className="h-auto p-0">
               <Text className="text-sm text-primary">Back to login</Text>
