@@ -90,26 +90,50 @@ export default function Login() {
    * Normalize identifier by role.
    * - Officer: strip non-digits.
    * - Citizen: collapse internal whitespace and trim.
-   * @param value - Raw identifier string.
-   * @returns Sanitized identifier.
    */
   const sanitizeIdentifier = (value: string): string => {
     return isOfficer ? value.replace(/\D+/g, "") : value.trim().replace(/\s+/g, " ");
   };
 
   /**
+   * Build a friendly display name for greeting toasts.
+   * - Citizen: derive from email local-part ("alex.johnson" → "Alex Johnson").
+   * - Officer: mask all but last 3 digits of ID.
+   */
+  const deriveDisplayName = (raw: string, officer: boolean): string => {
+    if (officer) {
+      const id = raw.trim();
+      if (!id) return "Officer";
+      const masked = id.replace(/\d(?=\d{3})/g, "•");
+      return `Officer ${masked}`;
+    }
+    const email = raw.trim();
+    const local = email.split("@")[0] ?? "";
+    if (!local) return "there";
+    const words = local.replace(/[_.-]+/g, " ").split(" ").filter(Boolean);
+    const proper = words
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+    return proper || "there";
+  };
+
+  /**
    * Handle sign-in flow.
    * - Applies sanitization.
+   * - Greets user contextually by role.
    * - Navigates to MFA for officers or home for citizens.
    */
   const onSignIn = (): void => {
     const safeId = sanitizeIdentifier(identifier);
     if (safeId !== identifier) setIdentifier(safeId);
 
+    const displayName = deriveDisplayName(safeId, isOfficer);
+
     if (isOfficer) {
+      toast.success(`Welcome back, ${displayName}!`);
       router.replace({ pathname: "/mfa", params: { role: "officer" } });
     } else {
-      toast.success("Signed in");
+      toast.success(`Welcome back, ${displayName}!`);
       router.replace({ pathname: "/home", params: { role: "citizen" } });
     }
   };
@@ -126,8 +150,8 @@ export default function Login() {
       contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF" }}
     >
       <View className="flex-1 p-5">
+        {/* Header */}
         <View className="flex-1 justify-center pt-10 pb-6">
-          {/* Header */}
           <View className="items-center mb-5">
             <Image
               source={Logo}
@@ -294,13 +318,7 @@ export default function Login() {
   );
 }
 
-/**
- * Segmented control tab.
- * @param active - Whether this tab is currently active.
- * @param label - Text label displayed for the tab.
- * @param icon - Icon component rendered next to the label.
- * @param onPress - Press handler for selecting the tab.
- */
+/** Segmented control tab. */
 function SegTab({
   active,
   label,

@@ -42,10 +42,11 @@ export default function Register() {
   /**
    * Submit registration (stub).
    * Replace with API integration and error handling as needed.
+   * Shows greeting using first name.
    */
   const onSignUp = (): void => {
     if (!canSubmit) return;
-    toast.success("Account created");
+    toast.success(`Welcome, ${firstName.trim()}!`);
     router.replace("/login");
   };
 
@@ -65,7 +66,7 @@ export default function Register() {
   const formTranslateY = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });
 
   /**
-   * Normalize name/email inputs.
+   * Normalize input (trim + collapse whitespace).
    */
   const sanitize = (v: string): string => v.trim().replace(/\s+/g, " ");
 
