@@ -34,7 +34,7 @@ import {
   SunMedium,
   TrendingDown,
   TrendingUp,
-  X, // <-- added
+  X,
 } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
@@ -83,12 +83,12 @@ export default function Home() {
     day: "numeric",
   });
 
-  // Overview + counts (mock)
-  const overview = useMemo(() => ({ activeReports: 8, remainingToday: 3, pendingCases: 5 }), []);
+  // Overview (mock) — ONLY pending + ongoing
+  const overview = useMemo(() => ({ pendingReports: 5, ongoingReports: 7 }), []);
   const counts = useMemo(
     () =>
       role === "officer"
-        ? { incidents: 12, lostFound: 4, alerts: 3, cases: 6 }
+        ? { incidents: 12, lostFound: 4, alerts: 3 }
         : { reportIncident: 0, lostFound: 2, myReports: 1, alerts: 3 },
     [role]
   );
@@ -110,40 +110,38 @@ export default function Home() {
     ],
     []
   );
-  const officerQueueAll = useMemo(
+
+  // OFFICER: Incoming queue (PENDING INCIDENTS ONLY, routes to Manage Incidents → Pending)
+  const officerQueue = useMemo(
     () => [
-      { id: "q1", title: "Overdue: Traffic accident", meta: "High · 1h", icon: AlertTriangle, tone: "destructive" as Tone, category: "Overdue" },
-      { id: "q2", title: "New: Vandalism report", meta: "Medium · 10m", icon: FileText, tone: "primary" as Tone, category: "New" },
-      { id: "q3", title: "Lost item: Phone", meta: "Low · 5m", icon: PackageSearch, tone: "accent" as Tone, category: "Lost" },
-    ],
-    []
-  );
-  const officerNewsAll = useMemo(
-    () => [
-      { id: "n1", title: "Internal memo: parade route", meta: "Read before Friday", icon: Megaphone, tone: "accent" as Tone },
-      { id: "n2", title: "System maintenance window", meta: "Saturday 1–3 AM", icon: Clock, tone: "ring" as Tone },
+      { id: "q1", title: "Overdue: Traffic accident", meta: "High · 1h", icon: AlertTriangle, tone: "destructive" as Tone },
+      { id: "q2", title: "New: Vandalism report", meta: "Medium · 10m", icon: FileText, tone: "primary" as Tone },
+      { id: "q3", title: "New: Suspicious activity", meta: "Medium · 5m", icon: ClipboardList, tone: "ring" as Tone },
     ],
     []
   );
 
-  // Filters (chips)
+  // OFFICER: manage safety alerts preview (replaces Announcements)
+  const safetyAlertsPreviewAll = useMemo(
+    () => [
+      { id: "s1", title: "Draft alert: Parade route", meta: "Needs review", icon: Megaphone, tone: "accent" as Tone },
+      { id: "s2", title: "Scheduled: System maintenance", meta: "Sat 1–3 AM", icon: Clock, tone: "ring" as Tone },
+    ],
+    []
+  );
+
+  // Filters (citizen alerts only)
   const [alertFilter, setAlertFilter] = useState<"All" | "Road" | "Weather" | "Maintenance">("All");
-  const [queueFilter, setQueueFilter] = useState<"All" | "Overdue" | "New" | "Lost">("All");
-
   const citizenAlerts = useMemo(
     () => (alertFilter === "All" ? citizenAlertsAll : citizenAlertsAll.filter((i) => i.category === alertFilter)),
     [alertFilter, citizenAlertsAll]
-  );
-  const officerQueue = useMemo(
-    () => (queueFilter === "All" ? officerQueueAll : officerQueueAll.filter((i) => i.category === queueFilter)),
-    [queueFilter, officerQueueAll]
   );
   const citizenRecent = citizenRecentAll;
 
   // Conditional alert banner
   const showBanner =
     role === "officer"
-      ? officerQueueAll.some((i) => i.tone === "destructive")
+      ? officerQueue.some((i) => i.tone === "destructive")
       : citizenAlertsAll.some((i) => i.tone === "destructive");
 
   // Chatbot (citizen only)
@@ -159,11 +157,10 @@ export default function Home() {
 
   const onSignOut = () => router.replace("/login");
 
-  // KPI trends (mock)
+  // KPI trends (optional visuals kept, values illustrative)
   const trends = {
-    activeReports: { dir: "up" as const, pct: 12, tone: "ring" as Tone },
-    remainingToday: { dir: "down" as const, pct: 5, tone: "primary" as Tone, progress: 70 },
-    pendingCases: { dir: "up" as const, pct: 3, tone: "destructive" as Tone },
+    pendingReports: { dir: "up" as const, pct: 4, tone: "primary" as Tone },
+    ongoingReports: { dir: "up" as const, pct: 11, tone: "ring" as Tone },
   };
 
   // Entrance animations
@@ -198,9 +195,14 @@ export default function Home() {
     transform: [{ translateY: v.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   });
 
-  // Navigation helpers (use the /incidents index redirector everywhere)
-  const goIncidents = () => router.push({ pathname: "/incidents", params: { role } });
+  // Navigation helpers
+  const goIncidentsIndex = () => router.push({ pathname: "/incidents", params: { role } });
+  const goManageIncidentsPending = () =>
+    router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } });
+  const goLostFoundPending = () =>
+    router.push({ pathname: "/(app)/lost-found/manage-lost-found", params: { role, tab: "pending" } });
   const goMyReports = () => router.push({ pathname: "/(app)/incidents/my-reports", params: { role } });
+  const goManageAlerts = () => router.push({ pathname: "/(app)/alerts/manage", params: { role } });
 
   return (
     <KeyboardAvoidingView
@@ -237,7 +239,7 @@ export default function Home() {
                   <View className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 flex-row items-center gap-2">
                     <AlertTriangle size={16} color="#DC2626" />
                     <Text className="text-[13px] text-destructive">
-                      There are high-priority alerts that may require your attention.
+                      Is it an emergency? Call 119 in emergency situations
                     </Text>
                   </View>
                 ) : null}
@@ -269,9 +271,8 @@ export default function Home() {
                     <Card>
                       <CardHeader title="Overview" tone="ring" />
                       <View className="flex-row gap-3 mt-3">
-                        <Kpi label="Active reports" value={overview.activeReports} tone="primary" trend={trends.activeReports} />
-                        <Kpi label="Remaining today" value={overview.remainingToday} tone="ring" trend={trends.remainingToday} />
-                        <Kpi label="Pending cases" value={overview.pendingCases} tone="destructive" trend={trends.pendingCases} />
+                        <Kpi label="Pending reports" value={overview.pendingReports} tone="primary" trend={trends.pendingReports} />
+                        <Kpi label="Ongoing reports" value={overview.ongoingReports} tone="ring" trend={trends.ongoingReports} />
                       </View>
                     </Card>
                   </Animated.View>
@@ -281,10 +282,9 @@ export default function Home() {
                       <CardHeader title="Manage" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Manage incidents", icon: Shield, onPress: goIncidents, count: counts.incidents },
-                          { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
-                          { label: "Safety alerts", icon: BellRing, onPress: () => {}, count: counts.alerts },
-                          { label: "Case overview", icon: ClipboardList, onPress: () => {}, variant: "secondary", count: counts.cases },
+                          { label: "Manage incidents", icon: Shield, onPress: goIncidentsIndex, count: counts.incidents },
+                          { label: "Lost & found", icon: PackageSearch, onPress: goLostFoundPending, variant: "secondary", count: counts.lostFound },
+                          { label: "Safety alerts", icon: BellRing, onPress: goManageAlerts, count: counts.alerts },
                         ]}
                       />
                     </Card>
@@ -292,14 +292,8 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[2])}>
                     <Card>
-                      <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={goIncidents} />
-                      <FilterChips
-                        options={["All", "Overdue", "New", "Lost"]}
-                        active={queueFilter}
-                        onChange={setQueueFilter}
-                        tone="accent"
-                        className="mt-3"
-                      />
+                      <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={goManageIncidentsPending} />
+                      {/* Pending incidents only */}
                       <List
                         items={officerQueue}
                         className="mt-2"
@@ -307,20 +301,22 @@ export default function Home() {
                         emptySubtitle="You’re all caught up. New reports will appear here."
                         emptyIcon={Inbox}
                         emptyTone="ring"
+                        onItemPress={goManageIncidentsPending}
                       />
                     </Card>
                   </Animated.View>
 
                   <Animated.View style={animStyle(sectionAnims[3])}>
                     <Card>
-                      <CardHeader title="Announcements" tone="ring" actionLabel="View" onAction={() => {}} />
+                      <CardHeader title="Manage safety alerts" tone="ring" actionLabel="Manage" onAction={goManageAlerts} />
                       <List
-                        items={officerNewsAll}
+                        items={safetyAlertsPreviewAll}
                         className="mt-2"
-                        emptyTitle="No announcements"
+                        emptyTitle="No safety alerts"
                         emptySubtitle="When there’s something new, it’ll show up here."
                         emptyIcon={Inbox}
                         emptyTone="accent"
+                        onItemPress={goManageAlerts}
                       />
                     </Card>
                   </Animated.View>
@@ -332,9 +328,9 @@ export default function Home() {
                       <CardHeader title="Quick actions" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Report incident", icon: ShieldPlus, onPress: goIncidents },
+                          { label: "Report incident", icon: ShieldPlus, onPress: goIncidentsIndex },
                           { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
-                          { label: "My reports", icon: ClipboardList, onPress: goMyReports, count: counts.myReports },
+                          { label: "My reports", icon: ClipboardList, onPress: goMyReports, count: 1 },
                           { label: "Safety alerts", icon: BellRing, onPress: () => {}, variant: "secondary", count: counts.alerts },
                         ]}
                       />
@@ -521,7 +517,14 @@ const IconTileButton: React.FC<Tile> = ({ label, icon: IconCmp, onPress, variant
   );
 };
 
-type ListItem = { id: string; title: string; meta?: string; icon: IconType; tone: Tone; category?: string };
+type ListItem = {
+  id: string;
+  title: string;
+  meta?: string;
+  icon: IconType;
+  tone: Tone;
+  category?: string;
+};
 
 /** Empty state block used by list/timeline components. */
 const EmptyState: React.FC<{
@@ -539,7 +542,7 @@ const EmptyState: React.FC<{
   </View>
 );
 
-/** Generic list with icon, title, and meta; shows empty state when needed. */
+/** Generic list with icon, title, and meta; shows empty state when needed, supports onPress per row. */
 const List: React.FC<{
   items: ListItem[];
   className?: string;
@@ -547,7 +550,8 @@ const List: React.FC<{
   emptySubtitle?: string;
   emptyIcon?: IconType;
   emptyTone?: Tone;
-}> = ({ items, className, emptyTitle = "Nothing yet.", emptySubtitle, emptyIcon, emptyTone = "ring" }) => {
+  onItemPress?: (item: ListItem) => void;
+}> = ({ items, className, emptyTitle = "Nothing yet.", emptySubtitle, emptyIcon, emptyTone = "ring", onItemPress }) => {
   if (!items || items.length === 0) {
     return (
       <View className={`bg-background rounded-xl border border-border mt-3 ${className ?? ""}`}>
@@ -557,28 +561,34 @@ const List: React.FC<{
   }
   return (
     <View className={`mt-3 ${className ?? ""}`}>
-      {items.map((it) => (
-        <View
-          key={it.id}
-          className="flex-row items-center justify-between bg-background rounded-xl border border-border px-3 py-3 mb-2"
-        >
-          <View className="flex-row items-center gap-3 flex-1">
-            <View className={`w-8 h-8 rounded-full items-center justify-center ${TONE_BG_FAINT[it.tone]}`}>
-              <it.icon size={18} color="#0F172A" />
+      {items.map((it) => {
+        const Row = (
+          <View className="flex-row items-center justify-between bg-background rounded-xl border border-border px-3 py-3 mb-2">
+            <View className="flex-row items-center gap-3 flex-1">
+              <View className={`w-8 h-8 rounded-full items-center justify-center ${TONE_BG_FAINT[it.tone]}`}>
+                <it.icon size={18} color="#0F172A" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-foreground">{it.title}</Text>
+                {it.meta ? <Text className={`text-xs mt-0.5 ${TONE_TEXT[it.tone]}`}>{it.meta}</Text> : null}
+              </View>
             </View>
-            <View className="flex-1">
-              <Text className="text-foreground">{it.title}</Text>
-              {it.meta ? <Text className={`text-xs mt-0.5 ${TONE_TEXT[it.tone]}`}>{it.meta}</Text> : null}
-            </View>
+            <ChevronRight size={16} color="#94A3B8" />
           </View>
-          <ChevronRight size={16} color="#94A3B8" />
-        </View>
-      ))}
+        );
+        return onItemPress ? (
+          <Pressable key={it.id} onPress={() => onItemPress(it)} android_ripple={{ color: "rgba(0,0,0,0.06)" }}>
+            {Row}
+          </Pressable>
+        ) : (
+          <View key={it.id}>{Row}</View>
+        );
+      })}
     </View>
   );
 };
 
-/** Filter chip row. */
+/** Filter chip row (used for citizen alerts only). */
 const FilterChips: React.FC<{
   options: string[];
   active: string;
