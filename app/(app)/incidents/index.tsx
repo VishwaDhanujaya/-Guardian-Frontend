@@ -1,41 +1,47 @@
 // app/(app)/incidents/index.tsx
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 /**
- * Incidents index screen.
- * - Redirects to the appropriate incidents route based on `role`.
- * - Accepts optional `role` query param ("officer" | "citizen").
+ * Incidents index:
+ * Redirects to the appropriate incidents route based on `role` (officer | citizen).
+ * Falls back to citizen if role is missing/invalid. Runs once, avoids double-redirects.
  */
 export default function IncidentsIndex() {
   const { role } = useLocalSearchParams<{ role?: string }>();
 
-  useEffect(() => {
-    const normalizedRole = normalizeRole(role);
-    const pathname = getIncidentsPath(normalizedRole);
+  const normalizedRole = useMemo<"officer" | "citizen">(() => normalizeRole(role), [role]);
+  const pathname = useMemo<IncidentsPath>(() => getIncidentsPath(normalizedRole), [normalizedRole]);
 
-    // Narrow object shape to the exact route+params the router expects.
+  // Prevent double replace on React strict-mode / re-mounts
+  const redirectedRef = useRef(false);
+
+  useEffect(() => {
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
+
     const href = {
       pathname,
       params: { role: normalizedRole },
     } satisfies { pathname: IncidentsPath; params: { role: "officer" | "citizen" } };
 
     router.replace(href);
-  }, [role]);
+  }, [pathname, normalizedRole]);
 
-  // No UI; screen exists only to redirect.
+  // No UI; just redirect.
   return null;
 }
 
 /** Normalize role to a supported value. */
-function normalizeRole(role?: string): "officer" | "citizen" {
-  return role === "officer" ? "officer" : "citizen";
+function normalizeRole(raw?: string): "officer" | "citizen" {
+  const v = (raw ?? "").trim().toLowerCase();
+  return v === "officer" ? "officer" : "citizen";
 }
 
 /** Allowed incidents paths (literal union). */
 type IncidentsPath = "/incidents/manage-incidents" | "/incidents/report-incidents";
 
-/** Resolve incidents route by role (returns a literal, not a generic string). */
+/** Resolve incidents route by role. */
 function getIncidentsPath(role: "officer" | "citizen"): IncidentsPath {
   return role === "officer"
     ? "/incidents/manage-incidents"

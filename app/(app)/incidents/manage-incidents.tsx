@@ -22,6 +22,7 @@ import {
   CheckCircle,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Hammer,
   Inbox,
@@ -35,10 +36,8 @@ type Status =
   | "In Review"
   | "Approved"
   | "Assigned"
-  | "In Progress"
-  | "Resolved"
-  | "Closed"
-  | "Overdue";
+  | "Ongoing"
+  | "Resolved";
 
 type Note = { id: string; text: string; at: string; by: string };
 
@@ -52,32 +51,20 @@ type Row = {
   notes?: Note[];
   showUpdate?: boolean;
   showNotes?: boolean;
-  // notifyCitizen removed from UI (kept optional for backward compatibility)
-  notifyCitizen?: boolean;
   newNoteDraft?: string;
-  // NEW: auto-expanding note input height per row
   newNoteHeight?: number;
 };
 
 type TabKey = "pending" | "ongoing" | "solved";
 
-/**
- * Officer-facing incidents management screen.
- * - Tabs: Pending, Ongoing, Solved
- * - Priority filter
- * - Update status
- * - Citizen-visible notes (auto-expanding editor)
- */
 export default function ManageIncidents() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
 
-  // Responsive helpers
   const { width } = useWindowDimensions();
   const isCompact = width < 360;
   const isNarrow = width < 400;
 
-  // Navigation safety (fallback to /home if stack cannot go back)
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
@@ -100,15 +87,15 @@ export default function ManageIncidents() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
-  // Data (mock)
+  // Mock data
   const [rows, setRows] = useState<Row[]>([
-    { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "1h ago", notes: [] },
-    { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "New",         suggestedPriority: "Normal", reportedAgo: "12m ago", notes: [] },
-    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  notes: [] },
-    { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "New",         suggestedPriority: "Low",    reportedAgo: "3m ago",  notes: [] },
-    { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "2h ago",  notes: [] },
-    { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review",   suggestedPriority: "Normal", reportedAgo: "8m ago",  notes: [] },
-    { id: "m7", title: "Noise complaint",            citizen: "Maria P.", status: "Resolved",    suggestedPriority: "Low",    reportedAgo: "1d ago",  notes: [] },
+    { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Ongoing",    suggestedPriority: "Urgent", reportedAgo: "1h ago", notes: [] },
+    { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "In Review", suggestedPriority: "Normal", reportedAgo: "12m ago", notes: [] },
+    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "Ongoing",   suggestedPriority: "Urgent", reportedAgo: "5m ago",  notes: [] },
+    { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "In Review", suggestedPriority: "Low",    reportedAgo: "3m ago",  notes: [] },
+    { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Ongoing",   suggestedPriority: "Urgent", reportedAgo: "2h ago",  notes: [] },
+    { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review", suggestedPriority: "Normal", reportedAgo: "8m ago",  notes: [] },
+    { id: "m7", title: "Noise complaint",            citizen: "Maria P.", status: "Resolved",  suggestedPriority: "Low",    reportedAgo: "1d ago",  notes: [] },
   ]);
 
   // Tabs
@@ -118,14 +105,19 @@ export default function ManageIncidents() {
   const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
   const priorityWeight: Record<Priority, number> = { Urgent: 3, Normal: 2, Low: 1 };
   const statusWeight: Record<Status, number> = {
-    Overdue: 7, New: 6, "In Review": 5, Approved: 4, Assigned: 3, "In Progress": 2, Resolved: 1, Closed: 0,
+    "In Review": 5,
+    Approved: 4,
+    Assigned: 3,
+    Ongoing: 2,
+    Resolved: 1,
+    New: 6,
   };
 
   // Partition by tab
   const tabBuckets = useMemo(() => {
-    const pendingSet: Status[]    = ["New", "In Review"];
-    const ongoingSet: Status[]    = ["Approved", "Assigned", "In Progress", "Overdue"];
-    const solvedSet: Status[]     = ["Resolved", "Closed"];
+    const pendingSet: Status[] = ["New", "In Review"];
+    const ongoingSet: Status[] = ["Approved", "Assigned", "Ongoing"];
+    const solvedSet: Status[]  = ["Resolved"];
 
     const pending = rows.filter(r => pendingSet.includes(r.status));
     const ongoing = rows.filter(r => ongoingSet.includes(r.status));
@@ -140,12 +132,12 @@ export default function ManageIncidents() {
     solved:  tabBuckets.solved.length,
   } as const;
 
-  // Active list with filter + sort
+  // Visible rows by filter + sort
   const visibleRows = useMemo(() => {
     const base =
       activeTab === "pending" ? tabBuckets.pending :
       activeTab === "ongoing" ? tabBuckets.ongoing :
-                                 tabBuckets.solved;
+                                tabBuckets.solved;
 
     const filtered = base.filter(r => priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter);
 
@@ -167,9 +159,9 @@ export default function ManageIncidents() {
 
   // Status tone
   const statusTone = (s: Status) =>
-    s === "Overdue" ? "text-destructive"
-      : s === "In Progress" ? "text-ring"
-      : s === "Resolved" || s === "Closed" ? "text-muted-foreground"
+    s === "Ongoing" ? "text-ring"
+      : s === "Resolved" ? "text-muted-foreground"
+      : s === "In Review" ? "text-primary"
       : "text-foreground";
 
   // Small filter chip
@@ -193,10 +185,17 @@ export default function ManageIncidents() {
   const approveRow = (id: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, status: "Approved", showUpdate: false } : r)));
 
+  // REJECT: soft-archive (remove from list)
+  const rejectRow = (id: string) =>
+    setRows(prev => {
+      const next = prev.filter(r => r.id !== id);
+      toast.success("Report rejected");
+      return next;
+    });
+
   const setDraftNote = (id: string, text: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, newNoteDraft: text } : r)));
 
-  // NEW: track auto height for the note editor per row
   const setNoteHeight = (id: string, height: number) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, newNoteHeight: height } : r)));
 
@@ -223,7 +222,7 @@ export default function ManageIncidents() {
     }));
   };
 
-  // Segmented tabs (responsive sizes)
+  // Segmented tabs (responsive)
   const TabButton = ({
     tab,
     label,
@@ -261,8 +260,8 @@ export default function ManageIncidents() {
     );
   };
 
-  const canShowApprove = (status: Status) => activeTab === "pending" && (status === "New" || status === "In Review");
-  const canShowUpdate = (_status: Status) => activeTab === "ongoing";
+  const canShowApprove = (status: Status) =>
+    activeTab === "pending" && (status === "New" || status === "In Review");
   const canAddNote = (_status: Status) => true;
 
   return (
@@ -296,7 +295,7 @@ export default function ManageIncidents() {
             className="bg-muted rounded-2xl border border-border"
             style={[animStyle, { padding: isNarrow ? 12 : 16 }]}
           >
-            {/* Tabs - segmented group (matches login style) */}
+            {/* Tabs */}
             <View className="flex-row flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-1">
               <TabButton tab="pending"  label="Pending"  count={counts.pending} Icon={BadgeCheck} />
               <TabButton tab="ongoing"  label="Ongoing"  count={counts.ongoing} Icon={Hammer} />
@@ -307,8 +306,8 @@ export default function ManageIncidents() {
             <View className="mt-4">
               <Text className="text-xs text-foreground mb-1">Priority filter</Text>
               <View className="flex-row flex-wrap gap-2">
-                {["All", "Urgent", "Normal", "Low"].map((p) => (
-                  <Chip key={p} label={p} active={priorityFilter === p} onPress={() => setPriorityFilter(p as any)} />
+                {(["All", "Urgent", "Normal", "Low"] as const).map((p) => (
+                  <Chip key={p} label={p} active={priorityFilter === p} onPress={() => setPriorityFilter(p)} />
                 ))}
               </View>
             </View>
@@ -331,7 +330,12 @@ export default function ManageIncidents() {
                   const PillIcon = pill.Icon;
 
                   return (
-                    <View key={r.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-3">
+                    <Pressable
+                      key={r.id}
+                      className="bg-background rounded-xl border border-border px-3 py-3 mb-3"
+                      onPress={() => router.push({ pathname: "/incidents/view", params: { id: r.id, role: resolvedRole, tab: activeTab } })}
+                      android_ripple={{ color: "rgba(0,0,0,0.04)" }}
+                    >
                       {/* Header: responsive to avoid overlap */}
                       {isCompact ? (
                         <View className="gap-2">
@@ -339,12 +343,25 @@ export default function ManageIncidents() {
                             <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
                               {r.title}
                             </Text>
+
+                            {/* Meta row with 'Read more' for In Review */}
                             <View className="flex-row flex-wrap items-center gap-2 mt-1">
                               <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                              {r.status === "In Review" ? (
+                                <Pressable
+                                  onPress={() => router.push({ pathname: "/incidents/view", params: { id: r.id, role: resolvedRole, tab: activeTab } })}
+                                  className="flex-row items-center"
+                                  hitSlop={6}
+                                >
+                                  <Text className="text-xs text-primary"> · Read more</Text>
+                                  <ChevronRight size={12} color="#2563EB" />
+                                </Pressable>
+                              ) : null}
                               <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
                               <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
                             </View>
                           </View>
+
                           <View className={`self-start px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
                             <PillIcon size={12} color="#0F172A" />
                             <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
@@ -356,12 +373,24 @@ export default function ManageIncidents() {
                             <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
                               {r.title}
                             </Text>
+
                             <View className="flex-row flex-wrap items-center gap-2 mt-1">
                               <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                              {r.status === "In Review" ? (
+                                <Pressable
+                                  onPress={() => router.push({ pathname: "/incidents/view", params: { id: r.id, role: resolvedRole, tab: activeTab } })}
+                                  className="flex-row items-center"
+                                  hitSlop={6}
+                                >
+                                  <Text className="text-xs text-primary"> · Read more</Text>
+                                  <ChevronRight size={12} color="#2563EB" />
+                                </Pressable>
+                              ) : null}
                               <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
                               <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
                             </View>
                           </View>
+
                           <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap} self-start max-w-[60%]`}>
                             <PillIcon size={12} color="#0F172A" />
                             <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
@@ -381,7 +410,7 @@ export default function ManageIncidents() {
                                 approveRow(r.id);
                                 toast.success("Report approved");
                               }}
-                              className="px-3 h-9 rounded-lg min-w-[112px]"
+                              className="px-3 h-9 rounded-lg min-w-[120px]"
                             >
                               <View className="flex-row items-center gap-1">
                                 <CheckCircle2 size={14} color={canShowApprove(r.status) ? "#FFFFFF" : "#0F172A"} />
@@ -392,10 +421,13 @@ export default function ManageIncidents() {
                             <Button
                               size="sm"
                               variant="secondary"
-                              onPress={() => toggleNotesPanel(r.id)}
-                              className="px-3 h-9 rounded-lg min-w-[112px]"
+                              onPress={() => rejectRow(r.id)}
+                              className="px-3 h-9 rounded-lg min-w-[100px]"
                             >
-                              <Text className="text-[12px] text-foreground">Notes</Text>
+                              <View className="flex-row items-center gap-1">
+                                <AlertTriangle size={14} color="#DC2626" />
+                                <Text className="text-[12px]" style={{ color: "#DC2626" }}>Reject</Text>
+                              </View>
                             </Button>
                           </>
                         ) : null}
@@ -406,7 +438,7 @@ export default function ManageIncidents() {
                               size="sm"
                               variant="secondary"
                               onPress={() => toggleUpdatePanel(r.id)}
-                              className="px-3 h-9 rounded-lg min-w-[112px]"
+                              className="px-3 h-9 rounded-lg min-w-[120px]"
                             >
                               <View className="flex-row items-center gap-1">
                                 <ClipboardList size={14} color="#0F172A" />
@@ -418,7 +450,7 @@ export default function ManageIncidents() {
                               size="sm"
                               variant="secondary"
                               onPress={() => toggleNotesPanel(r.id)}
-                              className="px-3 h-9 rounded-lg min-w-[112px]"
+                              className="px-3 h-9 rounded-lg min-w-[100px]"
                             >
                               <Text className="text-[12px] text-foreground">Notes</Text>
                             </Button>
@@ -430,7 +462,7 @@ export default function ManageIncidents() {
                             size="sm"
                             variant="secondary"
                             onPress={() => toggleNotesPanel(r.id)}
-                            className="px-3 h-9 rounded-lg min-w-[112px]"
+                            className="px-3 h-9 rounded-lg min-w-[100px]"
                           >
                             <Text className="text-[12px] text-foreground">Notes</Text>
                           </Button>
@@ -442,12 +474,12 @@ export default function ManageIncidents() {
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Set status</Text>
                           <View className="flex-row flex-wrap gap-2 mt-2">
-                            {["Approved", "Assigned", "In Progress", "Resolved", "Closed"].map((opt) => {
-                              const active = r.status === (opt as Status);
+                            {(["Approved", "Assigned", "Ongoing", "Resolved"] as const).map((opt) => {
+                              const active = r.status === opt;
                               return (
                                 <Pressable
                                   key={opt}
-                                  onPress={() => setRows(prev => prev.map(x => (x.id === r.id ? { ...x, status: opt as Status } : x)))}
+                                  onPress={() => setRows(prev => prev.map(x => (x.id === r.id ? { ...x, status: opt } : x)))}
                                   className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
                                   android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                                 >
@@ -477,7 +509,6 @@ export default function ManageIncidents() {
 
                       {/* Notes Panel (citizen-visible) */}
                       {r.showNotes ? (
-                        // Outer container ensures rounded border clips all inner content
                         <View className="bg-muted rounded-xl border border-border mt-3 overflow-hidden">
                           {/* Header */}
                           <View className="px-4 py-3">
@@ -503,7 +534,7 @@ export default function ManageIncidents() {
                             )}
                           </View>
 
-                          {/* Add note */}
+                          {/* Note editor */}
                           <View className="px-4 pt-2 pb-3">
                             <Input
                               value={r.newNoteDraft ?? ""}
@@ -518,7 +549,7 @@ export default function ManageIncidents() {
                             />
                           </View>
 
-                          {/* Footer — simplified, right-aligned buttons */}
+                          {/* Footer (inside card) */}
                           <View className="border-t border-border px-4 py-3 bg-muted">
                             <View className="flex-row flex-wrap items-center justify-end gap-2">
                               <Button
@@ -540,7 +571,7 @@ export default function ManageIncidents() {
                           </View>
                         </View>
                       ) : null}
-                    </View>
+                    </Pressable>
                   );
                 })
               )}
