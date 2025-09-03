@@ -6,8 +6,8 @@ import {
   Animated,
   Keyboard,
   Pressable,
-  Switch,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -25,8 +25,7 @@ import {
   ClipboardList,
   Hammer,
   Inbox,
-  Info,
-  MessageSquare,
+  Info as InfoIcon,
 } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
@@ -41,6 +40,8 @@ type Status =
   | "Closed"
   | "Overdue";
 
+type Note = { id: string; text: string; at: string; by: string };
+
 type Row = {
   id: string;
   title: string;
@@ -48,24 +49,33 @@ type Row = {
   status: Status;
   suggestedPriority: Priority;
   reportedAgo: string;
-  slaProgress?: number;
+  notes?: Note[];
   showUpdate?: boolean;
-  showMessage?: boolean;
+  showNotes?: boolean;
+  // notifyCitizen removed from UI (kept optional for backward compatibility)
   notifyCitizen?: boolean;
-  messageDraft?: string;
+  newNoteDraft?: string;
+  // NEW: auto-expanding note input height per row
+  newNoteHeight?: number;
 };
 
-type TabKey = "approve" | "update" | "solved";
+type TabKey = "pending" | "ongoing" | "solved";
 
 /**
  * Officer-facing incidents management screen.
- * - Tabs: Approve (triage), Update (status changes), Solved (post-resolution comms).
- * - Filters by suggested priority and sorts by status, priority, and SLA usage.
- * - Uses mock data; integrate backend data fetch/mutations where noted.
+ * - Tabs: Pending, Ongoing, Solved
+ * - Priority filter
+ * - Update status
+ * - Citizen-visible notes (auto-expanding editor)
  */
 export default function ManageIncidents() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
+
+  // Responsive helpers
+  const { width } = useWindowDimensions();
+  const isCompact = width < 360;
+  const isNarrow = width < 400;
 
   // Navigation safety (fallback to /home if stack cannot go back)
   const navigation = useNavigation<any>();
@@ -88,21 +98,21 @@ export default function ManageIncidents() {
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
-  };
+  } as const;
 
   // Data (mock)
   const [rows, setRows] = useState<Row[]>([
-    { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "1h ago", slaProgress: 95 },
-    { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "New",         suggestedPriority: "Normal", reportedAgo: "12m ago", slaProgress: 10 },
-    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  slaProgress: 40 },
-    { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "New",         suggestedPriority: "Low",    reportedAgo: "3m ago",  slaProgress: 5  },
-    { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "2h ago", slaProgress: 98 },
-    { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review",   suggestedPriority: "Normal", reportedAgo: "8m ago",  slaProgress: 15 },
-    { id: "m7", title: "Noise complaint",            citizen: "Maria P.", status: "Resolved",    suggestedPriority: "Low",    reportedAgo: "1d ago" },
+    { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "1h ago", notes: [] },
+    { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "New",         suggestedPriority: "Normal", reportedAgo: "12m ago", notes: [] },
+    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "In Progress", suggestedPriority: "Urgent", reportedAgo: "5m ago",  notes: [] },
+    { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "New",         suggestedPriority: "Low",    reportedAgo: "3m ago",  notes: [] },
+    { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Overdue",     suggestedPriority: "Urgent", reportedAgo: "2h ago",  notes: [] },
+    { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review",   suggestedPriority: "Normal", reportedAgo: "8m ago",  notes: [] },
+    { id: "m7", title: "Noise complaint",            citizen: "Maria P.", status: "Resolved",    suggestedPriority: "Low",    reportedAgo: "1d ago",  notes: [] },
   ]);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<TabKey>("approve");
+  const [activeTab, setActiveTab] = useState<TabKey>("pending");
 
   // Priority filter
   const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
@@ -113,119 +123,107 @@ export default function ManageIncidents() {
 
   // Partition by tab
   const tabBuckets = useMemo(() => {
-    const approveSet: Status[] = ["New", "In Review"];
-    const updateSet: Status[] = ["Approved", "Assigned", "In Progress", "Overdue"];
-    const solvedSet:  Status[] = ["Resolved", "Closed"];
+    const pendingSet: Status[]    = ["New", "In Review"];
+    const ongoingSet: Status[]    = ["Approved", "Assigned", "In Progress", "Overdue"];
+    const solvedSet: Status[]     = ["Resolved", "Closed"];
 
-    const approve = rows.filter(r => approveSet.includes(r.status));
-    const update  = rows.filter(r => updateSet.includes(r.status));
+    const pending = rows.filter(r => pendingSet.includes(r.status));
+    const ongoing = rows.filter(r => ongoingSet.includes(r.status));
     const solved  = rows.filter(r => solvedSet.includes(r.status));
 
-    return { approve, update, solved };
+    return { pending, ongoing, solved } as const;
   }, [rows]);
 
-  // Tab counts
   const counts = {
-    approve: tabBuckets.approve.length,
-    update:  tabBuckets.update.length,
+    pending: tabBuckets.pending.length,
+    ongoing: tabBuckets.ongoing.length,
     solved:  tabBuckets.solved.length,
-  };
+  } as const;
 
   // Active list with filter + sort
   const visibleRows = useMemo(() => {
     const base =
-      activeTab === "approve" ? tabBuckets.approve :
-      activeTab === "update"  ? tabBuckets.update  :
-                                tabBuckets.solved;
+      activeTab === "pending" ? tabBuckets.pending :
+      activeTab === "ongoing" ? tabBuckets.ongoing :
+                                 tabBuckets.solved;
 
     const filtered = base.filter(r => priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter);
 
-    filtered.sort((a, b) => {
-      const sw = statusWeight[b.status] - statusWeight[a.status]; // higher status weight first
+    return [...filtered].sort((a, b) => {
+      const sw = statusWeight[b.status] - statusWeight[a.status];
       if (sw !== 0) return sw;
-      const pw = priorityWeight[b.suggestedPriority] - priorityWeight[a.suggestedPriority]; // higher prio next
-      if (pw !== 0) return pw;
-      return (b.slaProgress ?? 0) - (a.slaProgress ?? 0); // higher SLA usage last
+      const pw = priorityWeight[b.suggestedPriority] - priorityWeight[a.suggestedPriority];
+      return pw;
     });
-
-    return filtered;
   }, [activeTab, tabBuckets, priorityFilter]);
 
-  /**
-   * Map priority to pill styling and icon.
-   * @param p - Suggested priority.
-   */
+  // Priority pill
   const prioPill = (p: Priority) =>
     p === "Urgent"
       ? { wrap: "bg-destructive/10 border-destructive/30", text: "text-destructive", Icon: AlertTriangle }
       : p === "Normal"
-      ? { wrap: "bg-ring/10 border-ring/30", text: "text-ring", Icon: Info }
+      ? { wrap: "bg-ring/10 border-ring/30", text: "text-ring", Icon: InfoIcon }
       : { wrap: "bg-primary/10 border-primary/30", text: "text-primary", Icon: CheckCircle2 };
 
-  /**
-   * Resolve text tone by status.
-   * @param s - Incident status.
-   */
+  // Status tone
   const statusTone = (s: Status) =>
     s === "Overdue" ? "text-destructive"
       : s === "In Progress" ? "text-ring"
       : s === "Resolved" || s === "Closed" ? "text-muted-foreground"
       : "text-foreground";
 
-  /** Small filter chip. */
+  // Small filter chip
   const Chip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
     <Pressable
       onPress={onPress}
       className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
       android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+      hitSlop={8}
     >
       <Text className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{label}</Text>
     </Pressable>
   );
 
-  // Inline panels + actions
+  // Toggle panels + actions
   const toggleUpdatePanel = (id: string) =>
-    setRows(prev => prev.map(r => (r.id === id ? { ...r, showUpdate: !r.showUpdate, showMessage: false } : r)));
-  const toggleMessagePanel = (id: string) =>
-    setRows(prev => prev.map(r => (r.id === id ? { ...r, showMessage: !r.showMessage, showUpdate: false } : r)));
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, showUpdate: !r.showUpdate, showNotes: false } : r)));
+  const toggleNotesPanel = (id: string) =>
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, showNotes: !r.showNotes, showUpdate: false } : r)));
+
   const approveRow = (id: string) =>
     setRows(prev => prev.map(r => (r.id === id ? { ...r, status: "Approved", showUpdate: false } : r)));
-  const setDraft = (id: string, text: string) =>
-    setRows(prev => prev.map(r => (r.id === id ? { ...r, messageDraft: text } : r)));
-  const setNotify = (id: string, value: boolean) =>
-    setRows(prev => prev.map(r => (r.id === id ? { ...r, notifyCitizen: value } : r)));
 
-  /**
-   * Persist status change and optionally notify the citizen.
-   * Replace with API call; optimistic update shown here.
-   */
-  const saveStatus = (id: string, newStatus: Status, notify: boolean, msg?: string) => {
-    setRows(prev =>
-      prev.map(r => (r.id === id ? { ...r, status: newStatus, showUpdate: false, notifyCitizen: false, messageDraft: "" } : r))
-    );
-    if (notify && (msg?.trim()?.length ?? 0) > 0) toast.success("Update sent to citizen");
-    else toast.success("Status updated");
+  const setDraftNote = (id: string, text: string) =>
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, newNoteDraft: text } : r)));
+
+  // NEW: track auto height for the note editor per row
+  const setNoteHeight = (id: string, height: number) =>
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, newNoteHeight: height } : r)));
+
+  const addNote = (id: string) => {
+    setRows(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const text = (r.newNoteDraft ?? "").trim();
+      if (!text) return r;
+      const nextNote: Note = {
+        id: `note_${Date.now()}`,
+        text,
+        at: new Date().toLocaleString(),
+        by: "Officer",
+      };
+      const next: Row = {
+        ...r,
+        notes: [...(r.notes ?? []), nextNote],
+        newNoteDraft: "",
+        newNoteHeight: undefined,
+        showNotes: true,
+      };
+      toast.success("Note added");
+      return next;
+    }));
   };
 
-  /**
-   * Send a message to the citizen for a given row.
-   * Replace with API call; optimistic clear shown here.
-   */
-  const sendMessage = (id: string, msg?: string) => {
-    if (!msg || !msg.trim()) return;
-    setRows(prev => prev.map(r => (r.id === id ? { ...r, showMessage: false, messageDraft: "" } : r)));
-    toast.success("Message sent to citizen");
-  };
-
-  const statusOptions: Status[] = ["New", "In Review", "Approved", "Assigned", "In Progress", "Resolved", "Closed"];
-  const templates = [
-    "We’ve received your report and are reviewing it.",
-    "Your case has been approved and assigned.",
-    "We’re on our way.",
-    "Your report has been resolved. Thank you!",
-  ];
-
-  /** Segmented tab button with count badge. */
+  // Segmented tabs (responsive sizes)
   const TabButton = ({
     tab,
     label,
@@ -238,44 +236,50 @@ export default function ManageIncidents() {
     Icon: React.ComponentType<{ size?: number; color?: string }>;
   }) => {
     const active = activeTab === tab;
+    const h = isCompact ? 36 : 40;
+    const iconSize = isCompact ? 14 : 16;
+    const textCls = active
+      ? (isCompact ? "text-primary-foreground text-[12px]" : "text-primary-foreground text-[13px]")
+      : (isCompact ? "text-foreground text-[12px]" : "text-foreground text-[13px]");
     return (
       <Pressable
         onPress={() => setActiveTab(tab)}
-        className={`flex-1 flex-row items-center justify-center gap-2 h-10 rounded-xl border ${
-          active ? "bg-foreground border-transparent" : "bg-background border-border"
-        }`}
+        className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg px-3 ${active ? "bg-foreground" : "bg-transparent"}`}
         android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+        style={{ height: h }}
       >
-        <Icon size={16} color={active ? "#FFFFFF" : "#0F172A"} />
-        <Text className={active ? "text-primary-foreground text-[13px]" : "text-foreground text-[13px]"}>{label}</Text>
+        <Icon size={iconSize} color={active ? "#FFFFFF" : "#0F172A"} />
+        <Text className={textCls}>{label}</Text>
         {typeof count === "number" ? (
           <View className={active ? "bg-primary/30 px-1.5 py-0.5 rounded-full" : "bg-foreground/10 px-1.5 py-0.5 rounded-full"}>
-            <Text className={active ? "text-primary-foreground text-[11px]" : "text-foreground text-[11px]"}>{count}</Text>
+            <Text className={isCompact ? (active ? "text-primary-foreground text-[10px]" : "text-foreground text-[10px]") : (active ? "text-primary-foreground text-[11px]" : "text-foreground text-[11px]")}>
+              {count}
+            </Text>
           </View>
         ) : null}
       </Pressable>
     );
   };
 
-  // Action availability
-  const canShowApprove = (status: Status) => activeTab === "approve" && (status === "New" || status === "In Review");
-  const canShowUpdate = (status: Status) => activeTab === "update"; // update controls exposed in Update tab
-  const canShowMessage = (_status: Status) => true; // messaging allowed in all tabs
+  const canShowApprove = (status: Status) => activeTab === "pending" && (status === "New" || status === "In Review");
+  const canShowUpdate = (_status: Status) => activeTab === "ongoing";
+  const canAddNote = (_status: Status) => true;
 
   return (
     <KeyboardAwareScrollView
       enableOnAndroid
+      enableAutomaticScroll
       keyboardShouldPersistTaps="handled"
-      extraScrollHeight={80}
+      extraScrollHeight={120}
       onScrollBeginDrag={Keyboard.dismiss}
       style={{ flex: 1, backgroundColor: "#FFFFFF" }}
-      contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF" }}
+      contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF", paddingBottom: 16 }}
     >
       <View className="flex-1 p-5">
         <View className="pt-10 pb-6">
           {/* Top bar */}
           <View className="flex-row items-center justify-between mb-4">
-            <Pressable onPress={goBack} className="flex-row items-center gap-1 px-2 py-1 -ml-2">
+            <Pressable onPress={goBack} className="flex-row items-center gap-1 px-2 py-1 -ml-2" hitSlop={8}>
               <ChevronLeft size={18} color="#0F172A" />
               <Text className="text-foreground">Back</Text>
             </Pressable>
@@ -288,77 +292,86 @@ export default function ManageIncidents() {
             <View style={{ width: 56 }} />
           </View>
 
-          {/* Tabs + filters + list */}
-          <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-4" style={animStyle}>
-            <View className="flex-row gap-2">
-              <TabButton tab="approve" label="Approve" count={counts.approve} Icon={BadgeCheck} />
-              <TabButton tab="update"  label="Update"  count={counts.update}  Icon={Hammer} />
-              <TabButton tab="solved"  label="Solved"  count={counts.solved}  Icon={CheckCircle} />
+          <Animated.View
+            className="bg-muted rounded-2xl border border-border"
+            style={[animStyle, { padding: isNarrow ? 12 : 16 }]}
+          >
+            {/* Tabs - segmented group (matches login style) */}
+            <View className="flex-row flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-1">
+              <TabButton tab="pending"  label="Pending"  count={counts.pending} Icon={BadgeCheck} />
+              <TabButton tab="ongoing"  label="Ongoing"  count={counts.ongoing} Icon={Hammer} />
+              <TabButton tab="solved"   label="Solved"   count={counts.solved}  Icon={CheckCircle} />
             </View>
 
-            <View>
-              <Text className="text-xs text-foreground mb-1">Suggested priority</Text>
+            {/* Filters */}
+            <View className="mt-4">
+              <Text className="text-xs text-foreground mb-1">Priority filter</Text>
               <View className="flex-row flex-wrap gap-2">
-                {(["All", "Urgent", "Normal", "Low"] as const).map((p) => (
-                  <Chip key={p} label={p} active={priorityFilter === p} onPress={() => setPriorityFilter(p)} />
+                {["All", "Urgent", "Normal", "Low"].map((p) => (
+                  <Chip key={p} label={p} active={priorityFilter === p} onPress={() => setPriorityFilter(p as any)} />
                 ))}
               </View>
             </View>
 
-            {visibleRows.length === 0 ? (
-              <View className="bg-background rounded-xl border border-border p-6 items-center">
-                <View className="w-14 h-14 rounded-full items-center justify-center bg-ring/10">
-                  <Inbox size={28} color="#0F172A" />
+            {/* List */}
+            <View className="mt-4">
+              {visibleRows.length === 0 ? (
+                <View className="bg-background rounded-xl border border-border p-6 items-center">
+                  <View className="w-14 h-14 rounded-full items-center justify-center bg-ring/10">
+                    <Inbox size={28} color="#0F172A" />
+                  </View>
+                  <Text className="mt-3 font-semibold text-foreground">Nothing here</Text>
+                  <Text className="text-xs text-muted-foreground mt-1 text-center">
+                    Try a different tab or adjust the priority filter.
+                  </Text>
                 </View>
-                <Text className="mt-3 font-semibold text-foreground">Nothing here</Text>
-                <Text className="text-xs text-muted-foreground mt-1 text-center">
-                  Try a different tab or adjust the priority filter.
-                </Text>
-              </View>
-            ) : (
-              <View className="mt-1">
-                {visibleRows.map((r) => {
+              ) : (
+                visibleRows.map((r) => {
                   const pill = prioPill(r.suggestedPriority);
                   const PillIcon = pill.Icon;
 
                   return (
-                    <View key={r.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-2">
-                      {/* Row header */}
-                      <View className="flex-row items-start justify-between gap-2">
-                        <View className="flex-1">
-                          <Text className="text-foreground">{r.title}</Text>
-                          <View className="flex-row items-center gap-2 mt-1">
-                            <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
-                            <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
-                            <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                    <View key={r.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-3">
+                      {/* Header: responsive to avoid overlap */}
+                      {isCompact ? (
+                        <View className="gap-2">
+                          <View className="pr-1 min-w-0">
+                            <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
+                              {r.title}
+                            </Text>
+                            <View className="flex-row flex-wrap items-center gap-2 mt-1">
+                              <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                              <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
+                              <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                            </View>
+                          </View>
+                          <View className={`self-start px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
+                            <PillIcon size={12} color="#0F172A" />
+                            <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
                           </View>
                         </View>
-
-                        <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
-                          <PillIcon size={12} color="#0F172A" />
-                          <Text className={`text-[11px] font-medium ${pill.text}`}>Suggested: {r.suggestedPriority}</Text>
-                        </View>
-                      </View>
-
-                      {/* SLA progress */}
-                      {typeof r.slaProgress === "number" ? (
-                        <View className="mt-3">
-                          <View className="h-2 rounded-full bg-primary/10 overflow-hidden">
-                            <View
-                              style={{ width: `${Math.max(0, Math.min(100, r.slaProgress))}%` }}
-                              className={`h-2 rounded-full ${
-                                r.slaProgress > 90 ? "bg-destructive" : r.slaProgress > 60 ? "bg-ring" : "bg-primary"
-                              }`}
-                            />
+                      ) : (
+                        <View className="flex-row flex-wrap items-start justify-between gap-3 gap-y-2">
+                          <View className="flex-1 pr-1 min-w-0">
+                            <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
+                              {r.title}
+                            </Text>
+                            <View className="flex-row flex-wrap items-center gap-2 mt-1">
+                              <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                              <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
+                              <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                            </View>
                           </View>
-                          <Text className="text-[10px] text-muted-foreground mt-0.5">SLA usage</Text>
+                          <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap} self-start max-w-[60%]`}>
+                            <PillIcon size={12} color="#0F172A" />
+                            <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
+                          </View>
                         </View>
-                      ) : null}
+                      )}
 
-                      {/* Actions */}
-                      <View className="flex-row items-center gap-2 mt-3">
-                        {/* Approve tab */}
-                        {activeTab === "approve" ? (
+                      {/* Actions: wrap cleanly */}
+                      <View className="flex-row flex-wrap items-center gap-2 mt-3">
+                        {activeTab === "pending" ? (
                           <>
                             <Button
                               size="sm"
@@ -368,37 +381,32 @@ export default function ManageIncidents() {
                                 approveRow(r.id);
                                 toast.success("Report approved");
                               }}
-                              className="px-3 h-9 rounded-lg"
+                              className="px-3 h-9 rounded-lg min-w-[112px]"
                             >
                               <View className="flex-row items-center gap-1">
                                 <CheckCircle2 size={14} color={canShowApprove(r.status) ? "#FFFFFF" : "#0F172A"} />
-                                <Text className={canShowApprove(r.status) ? "text-primary-foreground text-[12px]" : "text-foreground text-[12px]"}>
-                                  Approve
-                                </Text>
+                                <Text className={canShowApprove(r.status) ? "text-primary-foreground text-[12px]" : "text-foreground text-[12px]"}>Approve</Text>
                               </View>
                             </Button>
 
                             <Button
                               size="sm"
-                              onPress={() => toggleMessagePanel(r.id)}
-                              className="px-3 h-9 rounded-lg"
+                              variant="secondary"
+                              onPress={() => toggleNotesPanel(r.id)}
+                              className="px-3 h-9 rounded-lg min-w-[112px]"
                             >
-                              <View className="flex-row items-center gap-1">
-                                <MessageSquare size={14} color="#FFFFFF" />
-                                <Text className="text-primary-foreground text-[12px]">Message</Text>
-                              </View>
+                              <Text className="text-[12px] text-foreground">Notes</Text>
                             </Button>
                           </>
                         ) : null}
 
-                        {/* Update tab */}
-                        {activeTab === "update" ? (
+                        {activeTab === "ongoing" ? (
                           <>
                             <Button
                               size="sm"
                               variant="secondary"
                               onPress={() => toggleUpdatePanel(r.id)}
-                              className="px-3 h-9 rounded-lg"
+                              className="px-3 h-9 rounded-lg min-w-[112px]"
                             >
                               <View className="flex-row items-center gap-1">
                                 <ClipboardList size={14} color="#0F172A" />
@@ -408,46 +416,39 @@ export default function ManageIncidents() {
 
                             <Button
                               size="sm"
-                              onPress={() => toggleMessagePanel(r.id)}
-                              className="px-3 h-9 rounded-lg"
+                              variant="secondary"
+                              onPress={() => toggleNotesPanel(r.id)}
+                              className="px-3 h-9 rounded-lg min-w-[112px]"
                             >
-                              <View className="flex-row items-center gap-1">
-                                <MessageSquare size={14} color="#FFFFFF" />
-                                <Text className="text-primary-foreground text-[12px]">Message</Text>
-                              </View>
+                              <Text className="text-[12px] text-foreground">Notes</Text>
                             </Button>
                           </>
                         ) : null}
 
-                        {/* Solved tab */}
-                        {activeTab === "solved" ? (
+                        {activeTab === "solved" && canAddNote(r.status) ? (
                           <Button
                             size="sm"
-                            onPress={() => toggleMessagePanel(r.id)}
-                            className="px-3 h-9 rounded-lg"
+                            variant="secondary"
+                            onPress={() => toggleNotesPanel(r.id)}
+                            className="px-3 h-9 rounded-lg min-w-[112px]"
                           >
-                            <View className="flex-row items-center gap-1">
-                              <MessageSquare size={14} color="#FFFFFF" />
-                              <Text className="text-primary-foreground text-[12px]">Message</Text>
-                            </View>
+                            <Text className="text-[12px] text-foreground">Notes</Text>
                           </Button>
                         ) : null}
                       </View>
 
-                      {/* Update Panel (Update tab) */}
-                      {activeTab === "update" && r.showUpdate ? (
+                      {/* Update Panel (Ongoing tab) */}
+                      {activeTab === "ongoing" && r.showUpdate ? (
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Set status</Text>
                           <View className="flex-row flex-wrap gap-2 mt-2">
-                            {(["Approved", "Assigned", "In Progress", "Resolved", "Closed"] as const).map((opt) => {
-                              const active = r.status === opt;
+                            {["Approved", "Assigned", "In Progress", "Resolved", "Closed"].map((opt) => {
+                              const active = r.status === (opt as Status);
                               return (
                                 <Pressable
                                   key={opt}
-                                  onPress={() => setRows(prev => prev.map(x => (x.id === r.id ? { ...x, status: opt } : x)))}
-                                  className={`px-3 py-1 rounded-full border ${
-                                    active ? "bg-foreground/10 border-transparent" : "bg-background border-border"
-                                  }`}
+                                  onPress={() => setRows(prev => prev.map(x => (x.id === r.id ? { ...x, status: opt as Status } : x)))}
+                                  className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
                                   android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                                 >
                                   <Text className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{opt}</Text>
@@ -456,31 +457,17 @@ export default function ManageIncidents() {
                             })}
                           </View>
 
-                          <View className="flex-row items-center justify-between mt-3">
-                            <View className="flex-row items-center gap-2">
-                              <Switch value={r.notifyCitizen ?? false} onValueChange={(v) => setNotify(r.id, v)} />
-                              <Text className="text-[12px] text-foreground">Notify citizen</Text>
-                            </View>
-                            <Text className="text-[11px] text-muted-foreground">Optional message</Text>
-                          </View>
-
-                          <Input
-                            value={r.messageDraft ?? ""}
-                            onChangeText={(t) => setDraft(r.id, t)}
-                            placeholder="Type a short update…"
-                            className="bg-background mt-2 rounded-xl"
-                            style={{ minHeight: 80, textAlignVertical: "top", paddingTop: 12 }}
-                            multiline
-                          />
-
-                          <View className="flex-row items-center justify-end mt-3 gap-2">
+                          <View className="flex-row flex-wrap items-center justify-end mt-3 gap-2">
                             <Button variant="secondary" size="sm" className="px-3 h-9 rounded-lg" onPress={() => toggleUpdatePanel(r.id)}>
                               <Text className="text-foreground text-[12px]">Cancel</Text>
                             </Button>
                             <Button
                               size="sm"
                               className="px-3 h-9 rounded-lg"
-                              onPress={() => saveStatus(r.id, r.status, !!r.notifyCitizen, r.messageDraft)}
+                              onPress={() => {
+                                setRows(prev => prev.map(x => (x.id === r.id ? { ...x, showUpdate: false } : x)));
+                                toast.success("Status updated");
+                              }}
                             >
                               <Text className="text-primary-foreground text-[12px]">Save</Text>
                             </Button>
@@ -488,44 +475,66 @@ export default function ManageIncidents() {
                         </View>
                       ) : null}
 
-                      {/* Message Panel (all tabs) */}
-                      {r.showMessage ? (
-                        <View className="bg-muted rounded-xl border border-border p-3 mt-3">
-                          <Text className="text-[12px] text-foreground">Message citizen</Text>
-
-                          <View className="flex-row flex-wrap gap-2 mt-2">
-                            {templates.map((t) => (
-                              <Pressable
-                                key={t}
-                                onPress={() => setDraft(r.id, t)}
-                                className="px-3 py-1 rounded-full border bg-background border-border"
-                                android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-                              >
-                                <Text className="text-[11px] text-muted-foreground">{t}</Text>
-                              </Pressable>
-                            ))}
+                      {/* Notes Panel (citizen-visible) */}
+                      {r.showNotes ? (
+                        // Outer container ensures rounded border clips all inner content
+                        <View className="bg-muted rounded-xl border border-border mt-3 overflow-hidden">
+                          {/* Header */}
+                          <View className="px-4 py-3">
+                            <View className="flex-row items-center gap-1">
+                              <InfoIcon size={14} color="#0F172A" />
+                              <Text className="text-[12px] text-foreground">Notes (visible to the citizen)</Text>
+                            </View>
                           </View>
 
-                          <Input
-                            value={r.messageDraft ?? ""}
-                            onChangeText={(t) => setDraft(r.id, t)}
-                            placeholder="Write your message…"
-                            className="bg-background mt-2 rounded-xl"
-                            style={{ minHeight: 100, textAlignVertical: "top", paddingTop: 12 }}
-                            multiline
-                          />
+                          {/* Existing notes */}
+                          <View className="px-4 pb-1">
+                            {(r.notes ?? []).length > 0 ? (
+                              (r.notes ?? []).slice().reverse().map(n => (
+                                <View key={n.id} className="bg-background rounded-lg border border-border px-3 py-2 mb-2">
+                                  <Text className="text-[12px] text-foreground">{n.text}</Text>
+                                  <Text className="text-[10px] text-muted-foreground mt-1">{n.by} · {n.at}</Text>
+                                </View>
+                              ))
+                            ) : (
+                              <View className="bg-background rounded-lg border border-border px-3 py-2">
+                                <Text className="text-[12px] text-muted-foreground">No notes yet.</Text>
+                              </View>
+                            )}
+                          </View>
 
-                          <View className="flex-row items-center justify-between mt-3">
-                            <View className="flex-row items-center gap-2">
-                              <Switch value={r.notifyCitizen ?? true} onValueChange={(v) => setNotify(r.id, v)} />
-                              <Text className="text-[12px] text-foreground">Notify citizen</Text>
-                            </View>
-                            <View className="flex-row items-center gap-2">
-                              <Button variant="secondary" size="sm" className="px-3 h-9 rounded-lg" onPress={() => toggleMessagePanel(r.id)}>
-                                <Text className="text-foreground text-[12px]">Cancel</Text>
+                          {/* Add note */}
+                          <View className="px-4 pt-2 pb-3">
+                            <Input
+                              value={r.newNoteDraft ?? ""}
+                              onChangeText={(t) => setDraftNote(r.id, t)}
+                              onContentSizeChange={(e) => setNoteHeight(r.id, e.nativeEvent.contentSize.height)}
+                              placeholder="Add a note for the citizen…"
+                              className="bg-background rounded-xl"
+                              style={{ minHeight: 96, height: Math.max(96, r.newNoteHeight ?? 0), textAlignVertical: "top", paddingTop: 12 }}
+                              multiline
+                              numberOfLines={4}
+                              scrollEnabled={false}
+                            />
+                          </View>
+
+                          {/* Footer — simplified, right-aligned buttons */}
+                          <View className="border-t border-border px-4 py-3 bg-muted">
+                            <View className="flex-row flex-wrap items-center justify-end gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="px-3 h-9 rounded-lg min-w-[96px]"
+                                onPress={() => toggleNotesPanel(r.id)}
+                              >
+                                <Text className="text-foreground text-[12px]">Close</Text>
                               </Button>
-                              <Button size="sm" className="px-3 h-9 rounded-lg" onPress={() => sendMessage(r.id, r.messageDraft)}>
-                                <Text className="text-primary-foreground text-[12px]">Send</Text>
+                              <Button
+                                size="sm"
+                                className="px-3 h-9 rounded-lg min-w-[96px]"
+                                onPress={() => addNote(r.id)}
+                              >
+                                <Text className="text-primary-foreground text-[12px]">Add note</Text>
                               </Button>
                             </View>
                           </View>
@@ -533,9 +542,9 @@ export default function ManageIncidents() {
                       ) : null}
                     </View>
                   );
-                })}
-              </View>
-            )}
+                })
+              )}
+            </View>
           </Animated.View>
         </View>
       </View>
