@@ -3,11 +3,11 @@ import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Animated,
-    Keyboard,
-    Pressable,
-    Switch,
-    View,
+  Animated,
+  Keyboard,
+  Pressable,
+  Switch,
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -17,19 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
 import {
-    AlertTriangle,
-    BadgeCheck,
-    CalendarDays,
-    CheckCircle,
-    CheckCircle2,
-    ChevronLeft,
-    ClipboardList,
-    FileText,
-    Info,
-    MapPin,
-    MessageSquare,
-    PackageSearch,
-    ShieldAlert,
+  AlertTriangle,
+  BadgeCheck,
+  CalendarDays,
+  CheckCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ClipboardList,
+  FileText,
+  Info,
+  MapPin,
+  MessageSquare,
+  PackageSearch,
+  ShieldAlert,
 } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
@@ -109,26 +109,32 @@ export default function ViewIncident() {
 
   // Section priority: URL param > status inference
   const section: Section = useMemo<Section>(() => {
-    if (isSection(tabParam)) return tabParam;
+    if (isSection(tabParam)) return tabParam as Section;
     if (status === "Resolved") return "solved";
     if (status === "New" || status === "In Review") return "pending";
     return "ongoing"; // Approved, Assigned, Ongoing
   }, [tabParam, status]);
 
   // Officer permissions per section
-  const canApproveReject = role === "officer" && section === "pending";
+  const canApproveReject =
+    role === "officer" && section === "pending" && (status === "New" || status === "In Review");
   const canUpdateStatus = role === "officer" && section === "ongoing";
   const canAddNotes = role === "officer" && (section === "ongoing" || section === "solved");
 
   // Navigation
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
-    if (navigation?.canGoBack?.()) navigation.goBack();
-    else {
-      if (role === "officer") router.replace({ pathname: "/incidents/manage-incidents", params: { role } });
-      else router.replace({ pathname: "/incidents/my-reports", params: { role } });
+    if (navigation?.canGoBack?.()) {
+      navigation.goBack();
+    } else {
+      if (role === "officer") {
+        // Preserve the tab/section context when returning
+        router.replace({ pathname: "/incidents/manage-incidents", params: { role, tab: section } });
+      } else {
+        router.replace({ pathname: "/incidents/my-reports", params: { role } });
+      }
     }
-  }, [navigation, role]);
+  }, [navigation, role, section]);
 
   // Actions
   const onApprove = () => {
