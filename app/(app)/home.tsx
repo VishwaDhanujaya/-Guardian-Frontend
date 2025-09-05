@@ -196,11 +196,20 @@ export default function Home() {
   });
 
   // Navigation helpers
-  const goIncidentsIndex = () => router.push({ pathname: "/incidents", params: { role } });
+  const goIncidentsIndex = () => router.push({ pathname: "/incidents", params: { role } }); // Citizen: report flow index
   const goManageIncidentsPending = () =>
-    router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } });
-  const goLostFoundPending = () =>
-    router.push({ pathname: "/(app)/lost-found/manage-lost-found", params: { role, tab: "pending" } });
+    router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } }); // Officer: land on Pending
+
+  // NEW: Lost & Found routes
+  const goLostFoundCitizen = () =>
+    router.push({ pathname: "/(app)/lost-found/citizen", params: { role, tab: "found" } });
+
+  const goOfficerLostPending = () =>
+    router.push({ pathname: "/(app)/lost-found/officer-lost", params: { role, tab: "pending" } });
+
+  const goOfficerFound = () =>
+    router.push({ pathname: "/(app)/lost-found/officer-found", params: { role } });
+
   const goMyReports = () => router.push({ pathname: "/(app)/incidents/my-reports", params: { role } });
   const goManageAlerts = () => router.push({ pathname: "/(app)/alerts/manage", params: { role } });
 
@@ -282,8 +291,11 @@ export default function Home() {
                       <CardHeader title="Manage" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Manage incidents", icon: Shield, onPress: goIncidentsIndex, count: counts.incidents },
-                          { label: "Lost & found", icon: PackageSearch, onPress: goLostFoundPending, variant: "secondary", count: counts.lostFound },
+                          // Officer: go straight to Manage Incidents → Pending
+                          { label: "Manage incidents", icon: Shield, onPress: goManageIncidentsPending, count: counts.incidents },
+                          // Officer Lost & Found split into two
+                          { label: "Lost items", icon: PackageSearch, onPress: goOfficerLostPending, variant: "secondary", count: counts.lostFound },
+                          { label: "Found items", icon: PackageSearch, onPress: goOfficerFound, variant: "secondary" },
                           { label: "Safety alerts", icon: BellRing, onPress: goManageAlerts, count: counts.alerts },
                         ]}
                       />
@@ -293,7 +305,7 @@ export default function Home() {
                   <Animated.View style={animStyle(sectionAnims[2])}>
                     <Card>
                       <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={goManageIncidentsPending} />
-                      {/* Pending incidents only */}
+                      {/* Pending incidents only: each item routes to Manage Incidents → Pending */}
                       <List
                         items={officerQueue}
                         className="mt-2"
@@ -329,7 +341,7 @@ export default function Home() {
                       <TileGrid
                         tiles={[
                           { label: "Report incident", icon: ShieldPlus, onPress: goIncidentsIndex },
-                          { label: "Lost & found", icon: PackageSearch, onPress: () => {}, variant: "secondary", count: counts.lostFound },
+                          { label: "Lost & found", icon: PackageSearch, onPress: goLostFoundCitizen, variant: "secondary", count: counts.lostFound },
                           { label: "My reports", icon: ClipboardList, onPress: goMyReports, count: 1 },
                           { label: "Safety alerts", icon: BellRing, onPress: () => {}, variant: "secondary", count: counts.alerts },
                         ]}

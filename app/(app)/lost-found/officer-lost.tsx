@@ -1,13 +1,12 @@
-// app/(app)/incidents/manage-incidents.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  Keyboard,
-  Pressable,
-  View,
-  useWindowDimensions,
+    Animated,
+    Keyboard,
+    Pressable,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -17,27 +16,22 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
 import {
-  AlertTriangle,
-  BadgeCheck,
-  CheckCircle,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
-  Hammer,
-  Inbox,
-  Info as InfoIcon,
+    AlertTriangle,
+    BadgeCheck,
+    CheckCircle,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    ClipboardList,
+    Inbox,
+    Info as InfoIcon,
+    PackageSearch,
+    Search,
 } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
 type Priority = "Urgent" | "Normal" | "Low";
-type Status =
-  | "New"
-  | "In Review"
-  | "Approved"
-  | "Assigned"
-  | "Ongoing"
-  | "Resolved";
+type StatusLost = "New" | "In Review" | "Approved" | "Assigned" | "Searching" | "Returned";
 
 type Note = { id: string; text: string; at: string; by: string };
 
@@ -45,7 +39,7 @@ type Row = {
   id: string;
   title: string;
   citizen: string;
-  status: Status;
+  status: StatusLost;
   suggestedPriority: Priority;
   reportedAgo: string;
   notes?: Note[];
@@ -55,13 +49,10 @@ type Row = {
   newNoteHeight?: number;
 };
 
-type TabKey = "pending" | "ongoing" | "solved";
+type TabKey = "pending" | "searching" | "returned";
+const isTabKey = (v: any): v is TabKey => v === "pending" || v === "searching" || v === "returned";
 
-function isTabKey(v: any): v is TabKey {
-  return v === "pending" || v === "ongoing" || v === "solved";
-}
-
-export default function ManageIncidents() {
+export default function OfficerLost() {
   const { role, tab: tabParam } = useLocalSearchParams<{ role?: string; tab?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
 
@@ -93,13 +84,11 @@ export default function ManageIncidents() {
 
   // Mock data
   const [rows, setRows] = useState<Row[]>([
-    { id: "m1", title: "Traffic accident · Main St", citizen: "Alex J.", status: "Ongoing",    suggestedPriority: "Urgent", reportedAgo: "1h ago", notes: [] },
-    { id: "m2", title: "Vandalism · Park gate",      citizen: "Priya K.", status: "In Review", suggestedPriority: "Normal", reportedAgo: "12m ago", notes: [] },
-    { id: "m3", title: "Robbery · 3rd Ave",          citizen: "Omar R.",  status: "Ongoing",   suggestedPriority: "Urgent", reportedAgo: "5m ago",  notes: [] },
-    { id: "m4", title: "Lost item · Phone",          citizen: "Jin L.",   status: "In Review", suggestedPriority: "Low",    reportedAgo: "3m ago",  notes: [] },
-    { id: "m5", title: "Power line down",            citizen: "Sara D.",  status: "Ongoing",   suggestedPriority: "Urgent", reportedAgo: "2h ago",  notes: [] },
-    { id: "m6", title: "Suspicious activity",        citizen: "Ken M.",   status: "In Review", suggestedPriority: "Normal", reportedAgo: "8m ago",  notes: [] },
-    { id: "m7", title: "Noise complaint",            citizen: "Maria P.", status: "Resolved",  suggestedPriority: "Low",    reportedAgo: "1d ago",  notes: [] },
+    { id: "l1", title: "Lost: Wallet · Brown leather", citizen: "Alex J.", status: "In Review",  suggestedPriority: "Normal", reportedAgo: "12m ago", notes: [] },
+    { id: "l2", title: "Lost: Phone · Samsung black",  citizen: "Priya K.", status: "Approved",   suggestedPriority: "Urgent", reportedAgo: "2h ago",   notes: [] },
+    { id: "l3", title: "Lost: Backpack · Blue",        citizen: "Omar R.",  status: "Searching",  suggestedPriority: "Normal", reportedAgo: "4h ago",   notes: [] },
+    { id: "l4", title: "Lost: Watch · Silver",         citizen: "Jin L.",   status: "Returned",   suggestedPriority: "Low",    reportedAgo: "1d ago",   notes: [] },
+    { id: "l5", title: "Lost: ID Card",                citizen: "Sara D.",  status: "New",        suggestedPriority: "Low",    reportedAgo: "9m ago",   notes: [] },
   ]);
 
   // Tabs (init from URL if present)
@@ -111,40 +100,40 @@ export default function ManageIncidents() {
   // Priority filter
   const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
   const priorityWeight: Record<Priority, number> = { Urgent: 3, Normal: 2, Low: 1 };
-  const statusWeight: Record<Status, number> = {
+  const statusWeight: Record<StatusLost, number> = {
     "In Review": 5,
     Approved: 4,
     Assigned: 3,
-    Ongoing: 2,
-    Resolved: 1,
+    Searching: 2,
+    Returned: 1,
     New: 6,
   };
 
-  // Partition by tab
+  // Partition by tab (Pending = New/In Review, Searching = Approved/Assigned/Searching, Returned = Returned)
   const tabBuckets = useMemo(() => {
-    const pendingSet: Status[] = ["New", "In Review"];
-    const ongoingSet: Status[] = ["Approved", "Assigned", "Ongoing"];
-    const solvedSet: Status[]  = ["Resolved"];
+    const pendingSet: StatusLost[] = ["New", "In Review"];
+    const searchingSet: StatusLost[] = ["Approved", "Assigned", "Searching"];
+    const returnedSet: StatusLost[] = ["Returned"];
 
     const pending = rows.filter(r => pendingSet.includes(r.status));
-    const ongoing = rows.filter(r => ongoingSet.includes(r.status));
-    const solved  = rows.filter(r => solvedSet.includes(r.status));
+    const searching = rows.filter(r => searchingSet.includes(r.status));
+    const returned = rows.filter(r => returnedSet.includes(r.status));
 
-    return { pending, ongoing, solved } as const;
+    return { pending, searching, returned } as const;
   }, [rows]);
 
   const counts = {
     pending: tabBuckets.pending.length,
-    ongoing: tabBuckets.ongoing.length,
-    solved:  tabBuckets.solved.length,
+    searching: tabBuckets.searching.length,
+    returned: tabBuckets.returned.length,
   } as const;
 
   // Visible rows by filter + sort
   const visibleRows = useMemo(() => {
     const base =
-      activeTab === "pending" ? tabBuckets.pending :
-      activeTab === "ongoing" ? tabBuckets.ongoing :
-                                tabBuckets.solved;
+      activeTab === "pending"   ? tabBuckets.pending :
+      activeTab === "searching" ? tabBuckets.searching :
+                                  tabBuckets.returned;
 
     const filtered = base.filter(r => priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter);
 
@@ -165,9 +154,9 @@ export default function ManageIncidents() {
       : { wrap: "bg-primary/10 border-primary/30", text: "text-primary", Icon: CheckCircle2 };
 
   // Status tone
-  const statusTone = (s: Status) =>
-    s === "Ongoing" ? "text-ring"
-      : s === "Resolved" ? "text-muted-foreground"
+  const statusTone = (s: StatusLost) =>
+    s === "Searching" ? "text-ring"
+      : s === "Returned" ? "text-muted-foreground"
       : s === "In Review" ? "text-primary"
       : "text-foreground";
 
@@ -196,7 +185,7 @@ export default function ManageIncidents() {
   const rejectRow = (id: string) =>
     setRows(prev => {
       const next = prev.filter(r => r.id !== id);
-      toast.success("Report rejected");
+      toast.success("Lost report rejected");
       return next;
     });
 
@@ -229,7 +218,7 @@ export default function ManageIncidents() {
     }));
   };
 
-  // Segmented tabs (responsive)
+  // Segmented tabs (Pending | Searching | Returned)
   const TabButton = ({
     tab,
     label,
@@ -251,8 +240,7 @@ export default function ManageIncidents() {
       <Pressable
         onPress={() => {
           setActiveTab(tab);
-          // Reflect tab in URL so view screen can return here
-          router.setParams({ role: resolvedRole, tab });
+          router.setParams({ role: resolvedRole, tab }); // persist in URL
         }}
         className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg px-3 ${active ? "bg-foreground" : "bg-transparent"}`}
         android_ripple={{ color: "rgba(0,0,0,0.06)" }}
@@ -271,9 +259,9 @@ export default function ManageIncidents() {
     );
   };
 
-  const canShowApprove = (status: Status) =>
+  const canShowApprove = (status: StatusLost) =>
     activeTab === "pending" && (status === "New" || status === "In Review");
-  const canAddNote = (_status: Status) => true;
+  const canAddNote = (_status: StatusLost) => true;
 
   return (
     <KeyboardAwareScrollView
@@ -295,8 +283,8 @@ export default function ManageIncidents() {
             </Pressable>
 
             <View className="flex-row items-center gap-2">
-              <ClipboardList size={18} color="#0F172A" />
-              <Text className="text-xl font-semibold text-foreground">Manage incidents</Text>
+              <PackageSearch size={18} color="#0F172A" />
+              <Text className="text-xl font-semibold text-foreground">Lost items (officer)</Text>
             </View>
 
             <View style={{ width: 56 }} />
@@ -308,9 +296,9 @@ export default function ManageIncidents() {
           >
             {/* Tabs */}
             <View className="flex-row flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-1">
-              <TabButton tab="pending"  label="Pending"  count={counts.pending} Icon={BadgeCheck} />
-              <TabButton tab="ongoing"  label="Ongoing"  count={counts.ongoing} Icon={Hammer} />
-              <TabButton tab="solved"   label="Solved"   count={counts.solved}  Icon={CheckCircle} />
+              <TabButton tab="pending"   label="Pending"   count={counts.pending}   Icon={BadgeCheck} />
+              <TabButton tab="searching" label="Searching" count={counts.searching} Icon={Search} />
+              <TabButton tab="returned"  label="Returned"  count={counts.returned}  Icon={CheckCircle} />
             </View>
 
             {/* Filters */}
@@ -341,16 +329,9 @@ export default function ManageIncidents() {
                   const PillIcon = pill.Icon;
 
                   return (
-                    <Pressable
+                    <View
                       key={r.id}
                       className="bg-background rounded-xl border border-border px-3 py-3 mb-3"
-                      onPress={() =>
-                        router.push({
-                          pathname: "/incidents/view",
-                          params: { id: r.id, role: resolvedRole, tab: activeTab },
-                        })
-                      }
-                      android_ripple={{ color: "rgba(0,0,0,0.04)" }}
                     >
                       {/* Header: responsive to avoid overlap */}
                       {isCompact ? (
@@ -360,23 +341,13 @@ export default function ManageIncidents() {
                               {r.title}
                             </Text>
 
-                            {/* Meta row with 'Read more' for In Review */}
                             <View className="flex-row flex-wrap items-center gap-2 mt-1">
                               <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
                               {r.status === "In Review" ? (
-                                <Pressable
-                                  onPress={() =>
-                                    router.push({
-                                      pathname: "/incidents/view",
-                                      params: { id: r.id, role: resolvedRole, tab: activeTab },
-                                    })
-                                  }
-                                  className="flex-row items-center"
-                                  hitSlop={6}
-                                >
+                                <View className="flex-row items-center">
                                   <Text className="text-xs text-primary"> · Read more</Text>
                                   <ChevronRight size={12} color="#2563EB" />
-                                </Pressable>
+                                </View>
                               ) : null}
                               <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
                               <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
@@ -398,19 +369,10 @@ export default function ManageIncidents() {
                             <View className="flex-row flex-wrap items-center gap-2 mt-1">
                               <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
                               {r.status === "In Review" ? (
-                                <Pressable
-                                  onPress={() =>
-                                    router.push({
-                                      pathname: "/incidents/view",
-                                      params: { id: r.id, role: resolvedRole, tab: activeTab },
-                                    })
-                                  }
-                                  className="flex-row items-center"
-                                  hitSlop={6}
-                                >
+                                <View className="flex-row items-center" >
                                   <Text className="text-xs text-primary"> · Read more</Text>
                                   <ChevronRight size={12} color="#2563EB" />
-                                </Pressable>
+                                </View>
                               ) : null}
                               <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
                               <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
@@ -424,7 +386,7 @@ export default function ManageIncidents() {
                         </View>
                       )}
 
-                      {/* Actions: wrap cleanly */}
+                      {/* Actions by tab */}
                       <View className="flex-row flex-wrap items-center gap-2 mt-3">
                         {activeTab === "pending" ? (
                           <>
@@ -434,7 +396,7 @@ export default function ManageIncidents() {
                               disabled={!canShowApprove(r.status)}
                               onPress={() => {
                                 approveRow(r.id);
-                                toast.success("Report approved");
+                                toast.success("Lost report approved");
                               }}
                               className="px-3 h-9 rounded-lg min-w-[120px]"
                             >
@@ -458,13 +420,13 @@ export default function ManageIncidents() {
                           </>
                         ) : null}
 
-                        {activeTab === "ongoing" ? (
+                        {activeTab === "searching" ? (
                           <>
                             <Button
                               size="sm"
                               variant="secondary"
                               onPress={() => toggleUpdatePanel(r.id)}
-                              className="px-3 h-9 rounded-lg min-w-[120px]"
+                              className="px-3 h-9 rounded-lg min-w-[140px]"
                             >
                               <View className="flex-row items-center gap-1">
                                 <ClipboardList size={14} color="#0F172A" />
@@ -483,7 +445,7 @@ export default function ManageIncidents() {
                           </>
                         ) : null}
 
-                        {activeTab === "solved" && canAddNote(r.status) ? (
+                        {activeTab === "returned" && canAddNote(r.status) ? (
                           <Button
                             size="sm"
                             variant="secondary"
@@ -495,12 +457,12 @@ export default function ManageIncidents() {
                         ) : null}
                       </View>
 
-                      {/* Update Panel (Ongoing tab) */}
-                      {activeTab === "ongoing" && r.showUpdate ? (
+                      {/* Update Panel (Searching tab) */}
+                      {activeTab === "searching" && r.showUpdate ? (
                         <View className="bg-muted rounded-xl border border-border p-3 mt-3">
                           <Text className="text-[12px] text-foreground">Set status</Text>
                           <View className="flex-row flex-wrap gap-2 mt-2">
-                            {(["Approved", "Assigned", "Ongoing", "Resolved"] as const).map((opt) => {
+                            {(["Approved", "Assigned", "Searching", "Returned"] as const).map((opt) => {
                               const active = r.status === opt;
                               return (
                                 <Pressable
@@ -575,7 +537,7 @@ export default function ManageIncidents() {
                             />
                           </View>
 
-                          {/* Footer (inside card) */}
+                          {/* Footer */}
                           <View className="border-t border-border px-4 py-3 bg-muted">
                             <View className="flex-row flex-wrap items-center justify-end gap-2">
                               <Button
@@ -597,7 +559,7 @@ export default function ManageIncidents() {
                           </View>
                         </View>
                       ) : null}
-                    </Pressable>
+                    </View>
                   );
                 })
               )}

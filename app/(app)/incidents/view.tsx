@@ -2,13 +2,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Animated,
-  Keyboard,
-  Pressable,
-  Switch,
-  View,
-} from "react-native";
+import { Animated, Keyboard, Pressable, Switch, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -65,9 +59,7 @@ function getMockReport(id: string): Report {
     priority: "Urgent",
     description:
       "Two vehicles collided at the intersection. No visible fire. One lane blocked. Requesting traffic control.",
-    notes: [
-      { id: "n1", text: "Report received. Reviewing details.", at: "3:12 PM", by: "System" },
-    ],
+    notes: [{ id: "n1", text: "Report received. Reviewing details.", at: "3:12 PM", by: "System" }],
   };
 }
 
@@ -76,6 +68,9 @@ export default function ViewIncident() {
   const role: Role = roleParam === "officer" ? "officer" : "citizen";
 
   const isSection = (v: any): v is Section => v === "pending" || v === "ongoing" || v === "solved";
+
+  // Which tab to return to (from where we came). This is *only* for back-navigation.
+  const backTab: Section | undefined = isSection(tabParam) ? (tabParam as Section) : undefined;
 
   // Entrance animation
   const mount = useRef(new Animated.Value(0.9)).current;
@@ -107,17 +102,15 @@ export default function ViewIncident() {
   const [newNoteHeight, setNewNoteHeight] = useState<number | undefined>(undefined);
   const [notifyCitizen, setNotifyCitizen] = useState(true);
 
-  // Section priority: URL param > status inference
+  // SECTION for UI permissions: derive from *current status* (so actions update as status changes)
   const section: Section = useMemo<Section>(() => {
-    if (isSection(tabParam)) return tabParam as Section;
     if (status === "Resolved") return "solved";
     if (status === "New" || status === "In Review") return "pending";
     return "ongoing"; // Approved, Assigned, Ongoing
-  }, [tabParam, status]);
+  }, [status]);
 
   // Officer permissions per section
-  const canApproveReject =
-    role === "officer" && section === "pending" && (status === "New" || status === "In Review");
+  const canApproveReject = role === "officer" && section === "pending" && (status === "New" || status === "In Review");
   const canUpdateStatus = role === "officer" && section === "ongoing";
   const canAddNotes = role === "officer" && (section === "ongoing" || section === "solved");
 
@@ -128,13 +121,13 @@ export default function ViewIncident() {
       navigation.goBack();
     } else {
       if (role === "officer") {
-        // Preserve the tab/section context when returning
-        router.replace({ pathname: "/incidents/manage-incidents", params: { role, tab: section } });
+        // Prefer the tab the user came from; otherwise infer from current status
+        router.replace({ pathname: "/incidents/manage-incidents", params: { role, tab: backTab ?? section } });
       } else {
         router.replace({ pathname: "/incidents/my-reports", params: { role } });
       }
     }
-  }, [navigation, role, section]);
+  }, [navigation, role, backTab, section]);
 
   // Actions
   const onApprove = () => {
@@ -176,9 +169,12 @@ export default function ViewIncident() {
       : { wrap: "bg-primary/10 border-primary/30", text: "text-primary", Icon: CheckCircle2 };
 
   const statusTone =
-    status === "Ongoing" ? "text-ring"
-      : status === "Resolved" ? "text-muted-foreground"
-      : status === "In Review" ? "text-primary"
+    status === "Ongoing"
+      ? "text-ring"
+      : status === "Resolved"
+      ? "text-muted-foreground"
+      : status === "In Review"
+      ? "text-primary"
       : "text-foreground";
 
   const catIcon = {
@@ -278,7 +274,9 @@ export default function ViewIncident() {
                 <Button variant="secondary" onPress={onReject} className="flex-1 h-10 rounded-lg">
                   <View className="flex-row items-center justify-center gap-1">
                     <AlertTriangle size={16} color="#DC2626" />
-                    <Text className="text-[13px]" style={{ color: "#DC2626" }}>Reject</Text>
+                    <Text className="text-[13px]" style={{ color: "#DC2626" }}>
+                      Reject
+                    </Text>
                   </View>
                 </Button>
               </View>
@@ -293,11 +291,7 @@ export default function ViewIncident() {
             <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-3 mt-4" style={animStyle}>
               <View className="flex-row items-center justify-between">
                 <Text className="text-[12px] text-foreground">Status</Text>
-                <Button
-                  variant="secondary"
-                  className="h-9 px-3 rounded-lg"
-                  onPress={() => setShowUpdate((v) => !v)}
-                >
+                <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowUpdate((v) => !v)}>
                   <View className="flex-row items-center gap-1">
                     <ClipboardList size={14} color="#0F172A" />
                     <Text className="text-[12px] text-foreground">{showUpdate ? "Close" : "Update status"}</Text>
@@ -315,7 +309,9 @@ export default function ViewIncident() {
                         <Pressable
                           key={opt}
                           onPress={() => setStatus(opt)}
-                          className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
+                          className={`px-3 py-1 rounded-full border ${
+                            active ? "bg-foreground/10 border-transparent" : "bg-background border-border"
+                          }`}
                           android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                         >
                           <Text className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{opt}</Text>
@@ -328,7 +324,13 @@ export default function ViewIncident() {
                     <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowUpdate(false)}>
                       <Text className="text-foreground text-[12px]">Cancel</Text>
                     </Button>
-                    <Button className="h-9 px-3 rounded-lg" onPress={() => { setShowUpdate(false); toast.success("Status updated"); }}>
+                    <Button
+                      className="h-9 px-3 rounded-lg"
+                      onPress={() => {
+                        setShowUpdate(false);
+                        toast.success("Status updated");
+                      }}
+                    >
                       <Text className="text-primary-foreground text-[12px]">Save</Text>
                     </Button>
                   </View>
@@ -347,11 +349,7 @@ export default function ViewIncident() {
               </View>
 
               {canAddNotes ? (
-                <Button
-                  variant="secondary"
-                  className="h-9 px-3 rounded-lg"
-                  onPress={() => setShowNotes((v) => !v)}
-                >
+                <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowNotes((v) => !v)}>
                   <Text className="text-[12px] text-foreground">{showNotes ? "Close" : "Add note"}</Text>
                 </Button>
               ) : null}
@@ -360,14 +358,17 @@ export default function ViewIncident() {
             {/* Existing notes */}
             <View className="px-4 py-3">
               {notes.length > 0 ? (
-                notes.slice().reverse().map((n) => (
-                  <View key={n.id} className="bg-background rounded-lg border border-border px-3 py-2 mb-2">
-                    <Text className="text-[12px] text-foreground">{n.text}</Text>
-                    <Text className="text-[10px] text-muted-foreground mt-1">
-                      {n.by} · {n.at}
-                    </Text>
-                  </View>
-                ))
+                notes
+                  .slice()
+                  .reverse()
+                  .map((n) => (
+                    <View key={n.id} className="bg-background rounded-lg border border-border px-3 py-2 mb-2">
+                      <Text className="text-[12px] text-foreground">{n.text}</Text>
+                      <Text className="text-[10px] text-muted-foreground mt-1">
+                        {n.by} · {n.at}
+                      </Text>
+                    </View>
+                  ))
               ) : (
                 <View className="bg-background rounded-lg border border-border px-3 py-2">
                   <Text className="text-[12px] text-muted-foreground">No notes yet.</Text>
@@ -385,7 +386,12 @@ export default function ViewIncident() {
                     onContentSizeChange={(e) => setNewNoteHeight(e.nativeEvent.contentSize.height)}
                     placeholder="Add a note for the citizen…"
                     className="bg-background rounded-xl"
-                    style={{ minHeight: 96, height: Math.max(96, newNoteHeight ?? 0), textAlignVertical: "top", paddingTop: 12 }}
+                    style={{
+                      minHeight: 96,
+                      height: Math.max(96, newNoteHeight ?? 0),
+                      textAlignVertical: "top",
+                      paddingTop: 12,
+                    }}
                     multiline
                     numberOfLines={4}
                     scrollEnabled={false}
@@ -425,9 +431,7 @@ export default function ViewIncident() {
             <Animated.View className="bg-muted rounded-2xl border border-border p-4 mt-4" style={animStyle}>
               <View className="flex-row items-center gap-2">
                 <CheckCircle size={16} color="#0F172A" />
-                <Text className="text-[13px] text-foreground">
-                  We’ll keep this page updated as report progresses.
-                </Text>
+                <Text className="text-[13px] text-foreground">We’ll keep this page updated as report progresses.</Text>
               </View>
             </Animated.View>
           ) : null}
