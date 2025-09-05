@@ -253,7 +253,7 @@ export default function ManageIncidents() {
       <Pressable
         onPress={() => {
           setActiveTab(tab);
-          // keep the tab in the URL for consistency (so Back/deeplinks preserve state)
+          // Keep current tab reflected in URL so Back / deeplinks preserve it
           router.setParams({ role: resolvedRole, tab });
         }}
         className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg px-3 ${active ? "bg-foreground" : "bg-transparent"}`}
@@ -284,7 +284,6 @@ export default function ManageIncidents() {
       keyboardShouldPersistTaps="handled"
       extraScrollHeight={120}
       onScrollBeginDrag={Keyboard.dismiss}
-      onScrollBeginDragCapture={() => Keyboard.dismiss()}
       style={{ flex: 1, backgroundColor: "#FFFFFF" }}
       contentContainerStyle={{ flexGrow: 1, backgroundColor: "#FFFFFF", paddingBottom: 16 }}
     >
