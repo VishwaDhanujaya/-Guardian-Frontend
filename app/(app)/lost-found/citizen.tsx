@@ -61,8 +61,8 @@ export default function CitizenLostFound() {
       toast.error("Please fill required fields");
       return;
     }
-    toast.success("Lost item reported");
-    router.replace({ pathname: "/(app)/incidents/my-reports", params: { role: "citizen", filter: "lost" } });
+      toast.success("Lost item reported");
+      router.replace({ pathname: "/incidents/my-reports", params: { role: "citizen", filter: "lost" } });
   };
 
   const TabBtn = ({ k, label }: { k: TabKey; label: string }) => {

@@ -201,23 +201,23 @@ export default function Home() {
     router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } }); // Officer: land on Pending
 
   // Lost & Found routes
-  const goLostFoundCitizen = () =>
-    router.push({ pathname: "/(app)/lost-found/citizen", params: { role, tab: "found" } });
+    const goLostFoundCitizen = () =>
+      router.push({ pathname: "/lost-found/citizen", params: { role, tab: "found" } });
 
-  const goOfficerLostPending = () =>
-    router.push({ pathname: "/(app)/lost-found/officer-lost", params: { role, tab: "pending" } });
+    const goOfficerLostPending = () =>
+      router.push({ pathname: "/lost-found/officer-lost", params: { role, tab: "pending" } });
 
-  const goOfficerFound = () =>
-    router.push({ pathname: "/(app)/lost-found/officer-found", params: { role } });
+    const goOfficerFound = () =>
+      router.push({ pathname: "/lost-found/officer-found", params: { role } });
 
   // Safety alerts routes
-  const goCitizenAlerts = () =>
-    router.push({ pathname: "/(app)/alerts/citizen", params: { role } });
+    const goCitizenAlerts = () =>
+      router.push({ pathname: "/alerts/citizen", params: { role } });
 
-  const goManageAlerts = () =>
-    router.push({ pathname: "/(app)/alerts/manage", params: { role } });
+    const goManageAlerts = () =>
+      router.push({ pathname: "/alerts/manage", params: { role } });
 
-  const goMyReports = () => router.push({ pathname: "/(app)/incidents/my-reports", params: { role } });
+  const goMyReports = () => router.push({ pathname: "/incidents/my-reports", params: { role } });
 
   return (
     <KeyboardAvoidingView

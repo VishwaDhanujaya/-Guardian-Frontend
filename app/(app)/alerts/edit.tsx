@@ -1,7 +1,7 @@
 // app/(app)/alerts/edit.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Keyboard, Pressable, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -10,32 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { getAlert, saveAlert, AlertDraft } from "@/lib/api";
 
 import { ChevronLeft, Megaphone, Pencil, Save } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
 
-type AlertDraft = {
-  id?: string;
-  title: string;
-  message: string;
-  region: string;
-  // category?: string; // keep if you want later — not required now
-};
-
-/** Mock fetch (replace with real API) */
-function mockFetchAlert(id?: string): AlertDraft | null {
-  if (!id) return null;
-  if (id === "a1") {
-    return {
-      id: "a1",
-      title: "Road closure at Main St",
-      message: "Main St closed 9–12 for parade. Use 5th Ave detour.",
-      region: "Central Branch",
-    };
-  }
-  return null;
-}
 
 export default function EditAlert() {
   const { role, id } = useLocalSearchParams<{ role?: string; id?: string }>();
@@ -44,7 +24,7 @@ export default function EditAlert() {
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
-    else router.replace({ pathname: "/(app)/alerts/manage", params: { role: resolvedRole } });
+    else router.replace({ pathname: "/alerts/manage", params: { role: resolvedRole } });
   }, [navigation, resolvedRole]);
 
   // Entrance animation
@@ -63,29 +43,41 @@ export default function EditAlert() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
-  // Load existing (mock)
-  const existing = useMemo(() => mockFetchAlert(id), [id]);
-
-  // Form state
-  const [title, setTitle] = useState(existing?.title ?? "");
-  const [message, setMessage] = useState(existing?.message ?? "");
-  const [region, setRegion] = useState(existing?.region ?? "");
+  // Load existing alert
+  const [existing, setExisting] = useState<AlertDraft | null>(null);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [region, setRegion] = useState("");
   const [messageHeight, setMessageHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (id) {
+      getAlert(id)
+        .then((data) => {
+          setExisting(data);
+          setTitle(data.title);
+          setMessage(data.message);
+          setRegion(data.region);
+        })
+        .catch(() => toast.error("Failed to load alert"));
+    }
+  }, [id]);
 
   // Validation
   const canSave = title.trim().length > 0 && message.trim().length > 0 && region.trim().length > 0;
 
-  const onSave = () => {
+  const onSave = async () => {
     if (!canSave) {
       toast.error("Please fill all required fields");
       return;
     }
-    if (existing?.id) {
-      toast.success("Alert updated");
-    } else {
-      toast.success("Alert created");
+    try {
+      await saveAlert({ id: existing?.id, title, message, region });
+      toast.success(existing?.id ? "Alert updated" : "Alert created");
+      router.replace({ pathname: "/alerts/manage", params: { role: "officer" } });
+    } catch (e) {
+      toast.error("Failed to save alert");
     }
-    router.replace({ pathname: "/(app)/alerts/manage", params: { role: "officer" } });
   };
 
   return (
