@@ -2,7 +2,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Keyboard, Pressable, Switch, View } from "react-native";
+import { ActivityIndicator, Animated, Keyboard, Pressable, Switch, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -222,7 +222,7 @@ export default function ViewIncident() {
   if (!report) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
-        <Text className="text-foreground">Loading...</Text>
+        <ActivityIndicator color="#0F172A" />
       </View>
     );
   }

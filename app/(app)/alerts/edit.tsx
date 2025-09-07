@@ -2,7 +2,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Keyboard, Pressable, View } from "react-native";
+import { ActivityIndicator, Animated, Keyboard, Pressable, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -65,9 +65,12 @@ export default function EditAlert() {
   );
   const [region, setRegion] = useState(mockExisting?.region ?? "Central Branch");
   const [messageHeight, setMessageHeight] = useState<number | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (id) {
+      setLoading(true);
       getAlert(id)
         .then((data) => {
           setExisting(data);
@@ -75,7 +78,8 @@ export default function EditAlert() {
           setMessage(data.message);
           setRegion(data.region);
         })
-        .catch(() => toast.error("Failed to load alert, using mock"));
+        .catch(() => toast.error("Failed to load alert, using mock"))
+        .finally(() => setLoading(false));
     }
   }, [id]);
 
@@ -83,18 +87,29 @@ export default function EditAlert() {
   const canSave = title.trim().length > 0 && message.trim().length > 0 && region.trim().length > 0;
 
   const onSave = async () => {
-    if (!canSave) {
+    if (!canSave || saving) {
       toast.error("Please fill all required fields");
       return;
     }
     try {
+      setSaving(true);
       await saveAlert({ id: existing?.id, title, message, region });
       toast.success(existing?.id ? "Alert updated" : "Alert created");
       router.replace({ pathname: "/alerts/manage", params: { role: "officer" } });
     } catch (e) {
       toast.error("Failed to save alert");
+    } finally {
+      setSaving(false);
     }
   };
+
+  if (loading && !existing) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+        <ActivityIndicator color="#0F172A" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAwareScrollView
@@ -191,15 +206,19 @@ export default function EditAlert() {
               </Button>
               <Button
                 className="h-10 px-3 rounded-lg"
-                disabled={!canSave}
+                disabled={!canSave || saving}
                 onPress={onSave}
               >
-                <View className="flex-row items-center gap-1">
-                  {existing ? <Pencil size={16} color="#FFFFFF" /> : <Save size={16} color="#FFFFFF" />}
-                  <Text className="text-[13px] text-primary-foreground">
-                    {existing ? "Save changes" : "Create alert"}
-                  </Text>
-                </View>
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <View className="flex-row items-center gap-1">
+                    {existing ? <Pencil size={16} color="#FFFFFF" /> : <Save size={16} color="#FFFFFF" />}
+                    <Text className="text-[13px] text-primary-foreground">
+                      {existing ? "Save changes" : "Create alert"}
+                    </Text>
+                  </View>
+                )}
               </Button>
             </View>
 
