@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, PackageSearch, Plus } from "lucide-react-native";
+import { fetchFoundItems, reportLostItem, FoundItem } from "@/lib/api";
 
 type TabKey = "found" | "report";
 
@@ -39,14 +41,15 @@ export default function CitizenLostFound() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
-  // mock data
-  const foundItems = useMemo(
-    () => [
-      { id: "f1", title: "Wallet", meta: "Negombo · Brown leather" },
-      { id: "f2", title: "Phone", meta: "Colombo · Samsung, black" },
-    ],
-    []
-  );
+  const [foundItems, setFoundItems] = useState<FoundItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+
+  useEffect(() => {
+    fetchFoundItems()
+      .then(setFoundItems)
+      .catch(() => toast.error("Failed to load items"))
+      .finally(() => setLoadingItems(false));
+  }, []);
 
   // lost form state
   const [itemName, setItemName] = useState("");
@@ -56,13 +59,23 @@ export default function CitizenLostFound() {
   const [lastLoc, setLastLoc] = useState("");
   const [color, setColor] = useState("");
 
-  const submitLost = () => {
+  const [submitting, setSubmitting] = useState(false);
+  const submitLost = async () => {
     if (!itemName || !lastLoc) {
       toast.error("Please fill required fields");
       return;
     }
+    try {
+      setSubmitting(true);
+      await reportLostItem({ itemName, desc, model, serial, lastLoc, color });
       toast.success("Lost item reported");
       router.replace({ pathname: "/incidents/my-reports", params: { role: "citizen", filter: "lost" } });
+    } catch (e) {
+      toast.error("Failed to submit");
+    } finally {
+      setSubmitting(false);
+    }
+
   };
 
   const TabBtn = ({ k, label }: { k: TabKey; label: string }) => {
@@ -107,12 +120,16 @@ export default function CitizenLostFound() {
 
           {activeTab === "found" ? (
             <ScrollView>
-              {foundItems.map((f) => (
-                <View key={f.id} className="bg-background rounded-xl border border-border px-3 py-2 mb-2">
-                  <Text className="text-foreground">{f.title}</Text>
-                  <Text className="text-xs text-muted-foreground">{f.meta}</Text>
-                </View>
-              ))}
+              {loadingItems ? (
+                <ActivityIndicator className="mt-2" color="#0F172A" />
+              ) : (
+                foundItems.map((f) => (
+                  <View key={f.id} className="bg-background rounded-xl border border-border px-3 py-2 mb-2">
+                    <Text className="text-foreground">{f.title}</Text>
+                    <Text className="text-xs text-muted-foreground">{f.meta}</Text>
+                  </View>
+                ))
+              )}
             </ScrollView>
           ) : (
             <View className="gap-3">
@@ -122,9 +139,15 @@ export default function CitizenLostFound() {
               <Input placeholder="Serial (optional)" value={serial} onChangeText={setSerial} />
               <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
               <Input placeholder="Colour" value={color} onChangeText={setColor} />
-              <Button onPress={submitLost} className="mt-2 h-11 rounded-lg">
-                <Plus size={16} color="#fff" />
-                <Text className="text-primary-foreground ml-1">Submit</Text>
+              <Button onPress={submitLost} className="mt-2 h-11 rounded-lg" disabled={submitting}>
+                {submitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Plus size={16} color="#fff" />
+                    <Text className="text-primary-foreground ml-1">Submit</Text>
+                  </>
+                )}
               </Button>
             </View>
           )}

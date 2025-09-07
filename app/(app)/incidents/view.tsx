@@ -2,7 +2,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Keyboard, Pressable, Switch, View } from "react-native";
+import { ActivityIndicator, Animated, Keyboard, Pressable, Switch, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -32,6 +32,22 @@ type Priority = "Urgent" | "Normal" | "Low";
 type Status = "New" | "In Review" | "Approved" | "Assigned" | "Ongoing" | "Resolved";
 type Section = "pending" | "ongoing" | "solved";
 
+function getMockReport(id: string): Report {
+  return {
+    id,
+    title: "Traffic accident · Main St",
+    category: "Safety",
+    location: "Main St & 3rd Ave",
+    reportedBy: "Alex Johnson",
+    reportedAt: "Today · 3:10 PM",
+    status: "In Review",
+    priority: "Urgent",
+    description:
+      "Two vehicles collided at the intersection. No visible fire. One lane blocked. Requesting traffic control.",
+    notes: [{ id: "n1", text: "Report received. Reviewing details.", at: "3:12 PM", by: "System" }],
+  };
+}
+
 
 export default function ViewIncident() {
   const { id, role: roleParam, tab: tabParam } = useLocalSearchParams<{ id?: string; role?: string; tab?: string }>();
@@ -58,24 +74,37 @@ export default function ViewIncident() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
+  // Mock report for testing
+  const mockReport = useMemo(() => (id ? getMockReport(id) : null), [id]);
+
+
   // Load report
   const [report, setReport] = useState<Report | null>(null);
   const [status, setStatus] = useState<Status>("New");
   const [priority, setPriority] = useState<Priority>("Normal");
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loadError, setLoadError] = useState(false);
+
+  const load = useCallback(() => {
+    if (!id) return;
+    setLoadError(false);
+    setReport(null);
+    getIncident(id)
+      .then((data) => {
+        setReport(data);
+        setStatus(data.status);
+        setPriority(data.priority);
+        setNotes(data.notes ?? []);
+      })
+      .catch(() => {
+        setLoadError(true);
+      });
+  }, [id]);
 
   useEffect(() => {
-    if (id) {
-      getIncident(id)
-        .then((data) => {
-          setReport(data);
-          setStatus(data.status);
-          setPriority(data.priority);
-          setNotes(data.notes ?? []);
-        })
-        .catch(() => toast.error("Failed to load report"));
-    }
-  }, [id]);
+    load();
+  }, [load]);
+
   const [showUpdate, setShowUpdate] = useState<boolean>(false);
   const [showNotes, setShowNotes] = useState<boolean>(false);
 
@@ -158,10 +187,45 @@ export default function ViewIncident() {
       ? "text-primary"
       : "text-foreground";
 
+  if (loadError && !report) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+        <Text className="text-foreground mb-4">Failed to load report.</Text>
+        <View className="flex-row items-center gap-2">
+          <Button onPress={load} className="h-10 px-3 rounded-lg">
+            <Text className="text-primary-foreground">Retry</Text>
+          </Button>
+          {mockReport ? (
+            <Button
+              variant="secondary"
+              onPress={() => {
+                setReport(mockReport);
+                setStatus(mockReport.status);
+                setPriority(mockReport.priority);
+                setNotes(mockReport.notes);
+                setLoadError(false);
+              }}
+              className="h-10 px-3 rounded-lg"
+            >
+              <Text className="text-foreground">Use mock</Text>
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            onPress={goBack}
+            className="h-10 px-3 rounded-lg"
+          >
+            <Text className="text-foreground">Back</Text>
+          </Button>
+        </View>
+      </View>
+    );
+  }
+
   if (!report) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
-        <Text className="text-foreground">Loading...</Text>
+        <ActivityIndicator color="#0F172A" />
       </View>
     );
   }

@@ -1,8 +1,9 @@
 // app/(app)/alerts/edit.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, Keyboard, Pressable, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Keyboard, Pressable, View } from "react-native";
+
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -43,12 +44,45 @@ export default function EditAlert() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
+// Mock fetch (retain for testing when backend is unavailable)
+  const mockExisting = useMemo(() => {
+    if (!id) return null;
+    if (id === "a1") {
+      return {
+        id: "a1",
+        title: "Road closure at Main St",
+        message: "Main St closed 9–12 for parade. Use 5th Ave detour.",
+        region: "Central Branch",
+      } as AlertDraft;
+    }
+    return null;
+  }, [id]);
+
   // Load existing alert
-  const [existing, setExisting] = useState<AlertDraft | null>(null);
-  const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
-  const [region, setRegion] = useState("");
+  const [existing, setExisting] = useState<AlertDraft | null>(mockExisting);
+  const [title, setTitle] = useState(mockExisting?.title ?? "Road closure at Main St");
+  const [message, setMessage] = useState(
+    mockExisting?.message ?? "Main St closed 9–12 for parade. Use 5th Ave detour."
+  );
+  const [region, setRegion] = useState(mockExisting?.region ?? "Central Branch");
   const [messageHeight, setMessageHeight] = useState<number | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      setLoading(true);
+      getAlert(id)
+        .then((data) => {
+          setExisting(data);
+          setTitle(data.title);
+          setMessage(data.message);
+          setRegion(data.region);
+        })
+        .catch(() => toast.error("Failed to load alert, using mock"))
+        .finally(() => setLoading(false));
+    }
+  }, [id]);
 
   useEffect(() => {
     if (id) {
@@ -67,18 +101,32 @@ export default function EditAlert() {
   const canSave = title.trim().length > 0 && message.trim().length > 0 && region.trim().length > 0;
 
   const onSave = async () => {
-    if (!canSave) {
+    if (!canSave || saving) {
+
       toast.error("Please fill all required fields");
       return;
     }
     try {
+      setSaving(true);
+
       await saveAlert({ id: existing?.id, title, message, region });
       toast.success(existing?.id ? "Alert updated" : "Alert created");
       router.replace({ pathname: "/alerts/manage", params: { role: "officer" } });
     } catch (e) {
       toast.error("Failed to save alert");
+    } finally {
+      setSaving(false);
+
     }
   };
+
+  if (loading && !existing) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+        <ActivityIndicator color="#0F172A" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAwareScrollView
@@ -175,15 +223,19 @@ export default function EditAlert() {
               </Button>
               <Button
                 className="h-10 px-3 rounded-lg"
-                disabled={!canSave}
+                disabled={!canSave || saving}
                 onPress={onSave}
               >
-                <View className="flex-row items-center gap-1">
-                  {existing ? <Pencil size={16} color="#FFFFFF" /> : <Save size={16} color="#FFFFFF" />}
-                  <Text className="text-[13px] text-primary-foreground">
-                    {existing ? "Save changes" : "Create alert"}
-                  </Text>
-                </View>
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <View className="flex-row items-center gap-1">
+                    {existing ? <Pencil size={16} color="#FFFFFF" /> : <Save size={16} color="#FFFFFF" />}
+                    <Text className="text-[13px] text-primary-foreground">
+                      {existing ? "Save changes" : "Create alert"}
+                    </Text>
+                  </View>
+                )}
               </Button>
             </View>
 
