@@ -49,6 +49,7 @@ function getMockReport(id: string): Report {
   };
 }
 
+
 export default function ViewIncident() {
   const { id, role: roleParam, tab: tabParam } = useLocalSearchParams<{ id?: string; role?: string; tab?: string }>();
   const role: Role = roleParam === "officer" ? "officer" : "citizen";
