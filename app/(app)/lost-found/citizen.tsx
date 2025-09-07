@@ -58,7 +58,6 @@ export default function CitizenLostFound() {
   const [serial, setSerial] = useState("");
   const [color, setColor] = useState("");
   const [lastLoc, setLastLoc] = useState("");
-
   const resetForm = () => {
     setItemName("");
     setDesc("");
@@ -98,31 +97,35 @@ export default function CitizenLostFound() {
       <View className="flex-1 p-5">
         {/* Top bar */}
         <View className="flex-row items-center justify-between mb-4">
-          <Pressable onPress={goBack} className="flex-row items-center gap-1 px-2 py-1 -ml-2">
-            <ChevronLeft size={18} color="#0F172A" />
+          <Pressable onPress={goBack} className="flex-row items-center gap-1 px-2 py-1 -ml-2 rounded-md active:opacity-80">
+            <ChevronLeft size={18} color="#000000" />
             <Text className="text-foreground">Back</Text>
           </Pressable>
           <View className="flex-row items-center gap-2">
-            <PackageSearch size={18} color="#0F172A" />
+            <PackageSearch size={18} color="#000000" />
             <Text className="text-xl font-semibold text-foreground">Lost &amp; Found</Text>
           </View>
           <View style={{ width: 56 }} />
         </View>
-
-        <Animated.View className="bg-muted rounded-2xl border border-border p-4" style={animStyle}>
+        
+        <Animated.View className="bg-muted rounded-md border border-border p-4 shadow-sm" style={animStyle}>
           <View className="relative mb-4">
-            <SearchIcon size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 10 }} />
+            <SearchIcon
+              size={16}
+              color="#94A3B8"
+              style={{ position: "absolute", left: 12, top: 10 }}
+            />
             <Input
               value={search}
               onChangeText={setSearch}
-              placeholder="Search items"
-              className="bg-background h-10 rounded-xl pl-9"
+              placeholder="Search found items"
+              className="bg-background h-10 rounded-md pl-9 font-sans"
             />
           </View>
 
           <ScrollView>
             {loadingItems ? (
-              <ActivityIndicator className="mt-2" color="#0F172A" />
+              <ActivityIndicator className="mt-2" color="#000000" />
             ) : (
               filteredItems.map((f) => (
                 <Pressable
@@ -130,10 +133,10 @@ export default function CitizenLostFound() {
                   onPress={() =>
                     router.push({ pathname: "/lost-found/view", params: { id: f.id, type: "found", role: "citizen" } })
                   }
-                  className="bg-background rounded-xl border border-border px-3 py-3 mb-2"
+                  className="bg-background rounded-md border border-border px-3 py-3 mb-2 shadow-sm active:opacity-80"
                 >
                   <View className="flex-row items-center gap-2 mb-1">
-                    <PackageSearch size={16} color="#0F172A" />
+                    <PackageSearch size={16} color="#000000" />
                     <Text className="text-foreground">{f.title}</Text>
                   </View>
                   <Text className="text-xs text-muted-foreground">{f.meta}</Text>
@@ -145,10 +148,11 @@ export default function CitizenLostFound() {
 
         <Pressable
           onPress={() => setOpenForm(true)}
-          className="absolute bottom-8 right-6 w-14 h-14 rounded-full bg-foreground items-center justify-center shadow-lg"
-          android_ripple={{ color: "rgba(255,255,255,0.2)", borderless: true }}
+          className="absolute bottom-8 right-6 flex-row items-center gap-2 rounded-full bg-black px-5 py-3 shadow-md active:opacity-80"
+          android_ripple={{ color: "rgba(255,255,255,0.2)", borderless: false }}
         >
-          <Plus size={24} color="#FFFFFF" />
+          <Plus size={20} color="#FFFFFF" />
+          <Text className="font-semibold text-white">Add lost items</Text>
         </Pressable>
 
         <Modal visible={openForm} animationType="slide" onRequestClose={() => setOpenForm(false)}>
@@ -162,8 +166,8 @@ export default function CitizenLostFound() {
             <View className="flex-1 p-5">
               <View className="flex-row items-center justify-between mb-4">
                 <Text className="text-xl font-semibold text-foreground">Report lost item</Text>
-                <Pressable onPress={() => setOpenForm(false)} hitSlop={8}>
-                  <X size={20} color="#0F172A" />
+                <Pressable onPress={() => setOpenForm(false)} hitSlop={8} className="rounded-md active:opacity-80">
+                  <X size={20} color="#000000" />
                 </Pressable>
               </View>
               <View className="gap-4">
