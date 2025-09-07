@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { getAlert, saveAlert, AlertDraft } from "@/lib/api";
 import useMountAnimation from "@/hooks/useMountAnimation";
-
 import { ChevronLeft, Megaphone, Pencil, Save } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
@@ -84,6 +83,7 @@ export default function EditAlert() {
 
   const onSave = async () => {
     if (!canSave || saving) {
+
       toast.error("Please fill all required fields");
       return;
     }
