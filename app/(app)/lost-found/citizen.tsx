@@ -49,6 +49,7 @@ export default function CitizenLostFound() {
     f.meta.toLowerCase().includes(search.toLowerCase())
   );
 
+
   // lost form state
   const [itemName, setItemName] = useState("");
   const [desc, setDesc] = useState("");
@@ -78,12 +79,14 @@ export default function CitizenLostFound() {
       toast.success("Lost item reported");
       resetForm();
       setOpenForm(false);
+
       router.replace({ pathname: "/incidents/my-reports", params: { role: "citizen", filter: "lost" } });
     } catch (e) {
       toast.error("Failed to submit");
     } finally {
       setSubmitting(false);
     }
+
   };
 
   return (
@@ -133,6 +136,7 @@ export default function CitizenLostFound() {
               ))
             )}
           </ScrollView>
+
         </Animated.View>
 
         <Pressable
