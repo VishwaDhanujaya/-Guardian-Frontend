@@ -211,3 +211,59 @@ export async function reportLostItem(data: {
   return { success: true };
 }
 
+export type FoundItemDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  model?: string;
+  serial?: string;
+  color?: string;
+  lastLocation?: string;
+  branch?: string;
+  postedAt?: string;
+};
+
+export async function getFoundItem(id: string): Promise<FoundItemDetail> {
+  await mockRequest(`/lost-found/found/${id}`);
+  return {
+    id,
+    name: "Wallet",
+    description: "Brown leather wallet",
+    model: "N/A",
+    serial: "N/A",
+    color: "Brown",
+    lastLocation: "Negombo PS",
+    branch: "Negombo",
+    postedAt: "Today 10:30",
+  };
+}
+
+export type LostItemDetail = {
+  id: string;
+  name: string;
+  description?: string;
+  model?: string;
+  serial?: string;
+  color?: string;
+  lastLocation?: string;
+  reportedBy?: string;
+  reportedAt?: string;
+  status?: string;
+};
+
+export async function getLostItem(id: string): Promise<LostItemDetail> {
+  await mockRequest(`/lost-found/lost/${id}`);
+  return {
+    id,
+    name: "Phone",
+    description: "Samsung black case",
+    model: "S21",
+    serial: "IMEI123",
+    color: "Black",
+    lastLocation: "Colombo Central",
+    reportedBy: "Priya K.",
+    reportedAt: "Yesterday 15:20",
+    status: "In Review",
+  };
+}
+

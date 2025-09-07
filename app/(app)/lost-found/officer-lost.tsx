@@ -304,58 +304,64 @@ export default function OfficerLost() {
                       key={r.id}
                       className="bg-background rounded-xl border border-border px-3 py-3 mb-3"
                     >
-                      {/* Header: responsive to avoid overlap */}
-                      {isCompact ? (
-                        <View className="gap-2">
-                          <View className="pr-1 min-w-0">
-                            <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
-                              {r.title}
-                            </Text>
+                      <Pressable
+                        onPress={() =>
+                          router.push({ pathname: "/lost-found/view", params: { id: r.id, type: "lost", role: "officer" } })
+                        }
+                      >
+                        {/* Header: responsive to avoid overlap */}
+                        {isCompact ? (
+                          <View className="gap-2">
+                            <View className="pr-1 min-w-0">
+                              <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
+                                {r.title}
+                              </Text>
 
-                            <View className="flex-row flex-wrap items-center gap-2 mt-1">
-                              <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
-                              {r.status === "In Review" ? (
-                                <View className="flex-row items-center">
-                                  <Text className="text-xs text-primary"> · Read more</Text>
-                                  <ChevronRight size={12} color="#2563EB" />
-                                </View>
-                              ) : null}
-                              <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
-                              <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                              <View className="flex-row flex-wrap items-center gap-2 mt-1">
+                                <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                                {r.status === "In Review" ? (
+                                  <View className="flex-row items-center">
+                                    <Text className="text-xs text-primary"> · Read more</Text>
+                                    <ChevronRight size={12} color="#2563EB" />
+                                  </View>
+                                ) : null}
+                                <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
+                                <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                              </View>
+                            </View>
+
+                            <View className={`self-start px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
+                              <PillIcon size={12} color="#0F172A" />
+                              <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
                             </View>
                           </View>
+                        ) : (
+                          <View className="flex-row flex-wrap items-start justify-between gap-3 gap-y-2">
+                            <View className="flex-1 pr-1 min-w-0">
+                              <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
+                                {r.title}
+                              </Text>
 
-                          <View className={`self-start px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
-                            <PillIcon size={12} color="#0F172A" />
-                            <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <View className="flex-row flex-wrap items-start justify-between gap-3 gap-y-2">
-                          <View className="flex-1 pr-1 min-w-0">
-                            <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
-                              {r.title}
-                            </Text>
+                              <View className="flex-row flex-wrap items-center gap-2 mt-1">
+                                <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                                {r.status === "In Review" ? (
+                                  <View className="flex-row items-center" >
+                                    <Text className="text-xs text-primary"> · Read more</Text>
+                                    <ChevronRight size={12} color="#2563EB" />
+                                  </View>
+                                ) : null}
+                                <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
+                                <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                              </View>
+                            </View>
 
-                            <View className="flex-row flex-wrap items-center gap-2 mt-1">
-                              <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
-                              {r.status === "In Review" ? (
-                                <View className="flex-row items-center" >
-                                  <Text className="text-xs text-primary"> · Read more</Text>
-                                  <ChevronRight size={12} color="#2563EB" />
-                                </View>
-                              ) : null}
-                              <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
-                              <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                            <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap} self-start max-w-[60%]`}>
+                              <PillIcon size={12} color="#0F172A" />
+                              <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
                             </View>
                           </View>
-
-                          <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap} self-start max-w-[60%]`}>
-                            <PillIcon size={12} color="#0F172A" />
-                            <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
-                          </View>
-                        </View>
-                      )}
+                        )}
+                      </Pressable>
 
                       {/* Actions by tab */}
                       <View className="flex-row flex-wrap items-center gap-2 mt-3">

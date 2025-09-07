@@ -13,6 +13,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, PackageSearch, Plus, Search as SearchIcon, X } from "lucide-react-native";
@@ -79,14 +80,12 @@ export default function CitizenLostFound() {
       toast.success("Lost item reported");
       resetForm();
       setOpenForm(false);
-
       router.replace({ pathname: "/incidents/my-reports", params: { role: "citizen", filter: "lost" } });
     } catch (e) {
       toast.error("Failed to submit");
     } finally {
       setSubmitting(false);
     }
-
   };
 
   return (
@@ -126,17 +125,22 @@ export default function CitizenLostFound() {
               <ActivityIndicator className="mt-2" color="#0F172A" />
             ) : (
               filteredItems.map((f) => (
-                <View key={f.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-2">
+                <Pressable
+                  key={f.id}
+                  onPress={() =>
+                    router.push({ pathname: "/lost-found/view", params: { id: f.id, type: "found", role: "citizen" } })
+                  }
+                  className="bg-background rounded-xl border border-border px-3 py-3 mb-2"
+                >
                   <View className="flex-row items-center gap-2 mb-1">
                     <PackageSearch size={16} color="#0F172A" />
                     <Text className="text-foreground">{f.title}</Text>
                   </View>
                   <Text className="text-xs text-muted-foreground">{f.meta}</Text>
-                </View>
+                </Pressable>
               ))
             )}
           </ScrollView>
-
         </Animated.View>
 
         <Pressable
@@ -162,13 +166,31 @@ export default function CitizenLostFound() {
                   <X size={20} color="#0F172A" />
                 </Pressable>
               </View>
-              <View className="gap-3">
-                <Input placeholder="Item name*" value={itemName} onChangeText={setItemName} />
-                <Input placeholder="Description" value={desc} onChangeText={setDesc} />
-                <Input placeholder="Model" value={model} onChangeText={setModel} />
-                <Input placeholder="Serial/IMEI (optional)" value={serial} onChangeText={setSerial} />
-                <Input placeholder="Colour" value={color} onChangeText={setColor} />
-                <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
+              <View className="gap-4">
+                <View className="gap-1">
+                  <Label>Item name*</Label>
+                  <Input value={itemName} onChangeText={setItemName} />
+                </View>
+                <View className="gap-1">
+                  <Label>Description</Label>
+                  <Input value={desc} onChangeText={setDesc} />
+                </View>
+                <View className="gap-1">
+                  <Label>Model</Label>
+                  <Input value={model} onChangeText={setModel} />
+                </View>
+                <View className="gap-1">
+                  <Label>Serial/IMEI (optional)</Label>
+                  <Input value={serial} onChangeText={setSerial} />
+                </View>
+                <View className="gap-1">
+                  <Label>Colour</Label>
+                  <Input value={color} onChangeText={setColor} />
+                </View>
+                <View className="gap-1">
+                  <Label>Last location*</Label>
+                  <Input value={lastLoc} onChangeText={setLastLoc} />
+                </View>
                 <Button onPress={submitLost} className="mt-2 h-11 rounded-lg" disabled={submitting}>
                   {submitting ? (
                     <ActivityIndicator color="#fff" />

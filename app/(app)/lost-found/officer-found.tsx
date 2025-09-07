@@ -7,6 +7,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import useMountAnimation from "@/hooks/useMountAnimation";
 
@@ -133,14 +134,35 @@ export default function OfficerFound() {
             {/* Form */}
             {openForm ? (
               <View className="bg-muted rounded-xl border border-border p-3">
-                <View className="gap-3">
-                  <Input placeholder="Item name*" value={name} onChangeText={setName} />
-                  <Input placeholder="Description" value={desc} onChangeText={setDesc} />
-                  <Input placeholder="Model" value={model} onChangeText={setModel} />
-                  <Input placeholder="Serial/IMEI (optional)" value={serial} onChangeText={setSerial} />
-                  <Input placeholder="Colour" value={color} onChangeText={setColor} />
-                  <Input placeholder="Police branch" value={branch} onChangeText={setBranch} />
-                  <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
+                <View className="gap-4">
+                  <View className="gap-1">
+                    <Label>Item name*</Label>
+                    <Input value={name} onChangeText={setName} />
+                  </View>
+                  <View className="gap-1">
+                    <Label>Description</Label>
+                    <Input value={desc} onChangeText={setDesc} />
+                  </View>
+                  <View className="gap-1">
+                    <Label>Model</Label>
+                    <Input value={model} onChangeText={setModel} />
+                  </View>
+                  <View className="gap-1">
+                    <Label>Serial/IMEI (optional)</Label>
+                    <Input value={serial} onChangeText={setSerial} />
+                  </View>
+                  <View className="gap-1">
+                    <Label>Colour</Label>
+                    <Input value={color} onChangeText={setColor} />
+                  </View>
+                  <View className="gap-1">
+                    <Label>Police branch</Label>
+                    <Input value={branch} onChangeText={setBranch} />
+                  </View>
+                  <View className="gap-1">
+                    <Label>Last location*</Label>
+                    <Input value={lastLoc} onChangeText={setLastLoc} />
+                  </View>
                 </View>
 
                 <View className="flex-row items-center justify-end gap-2 mt-3">
@@ -169,7 +191,13 @@ export default function OfficerFound() {
               ) : (
                 <ScrollView>
                   {items.map((it) => (
-                    <View key={it.id} className="bg-background rounded-xl border border-border px-3 py-3 mb-2">
+                    <Pressable
+                      key={it.id}
+                      onPress={() =>
+                        router.push({ pathname: "/lost-found/view", params: { id: it.id, type: "found", role: "officer" } })
+                      }
+                      className="bg-background rounded-xl border border-border px-3 py-3 mb-2"
+                    >
                       <View className="flex-row items-center gap-2 mb-1">
                         <PackageSearch size={16} color="#0F172A" />
                         <Text className="text-foreground">{it.name}</Text>
@@ -183,7 +211,7 @@ export default function OfficerFound() {
                         {it.branch ? <Chip label={`Branch: ${it.branch}`} /> : null}
                         {it.postedAt ? <Chip label={`Posted: ${it.postedAt}`} /> : null}
                       </View>
-                    </View>
+                    </Pressable>
                   ))}
                 </ScrollView>
               )}
