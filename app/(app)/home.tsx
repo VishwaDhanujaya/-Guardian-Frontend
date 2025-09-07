@@ -12,13 +12,13 @@ import {
   View,
 } from 'react-native';
 
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { toast } from '@/components/toast';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchProfile } from '@/lib/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   AlertTriangle,
@@ -503,7 +503,7 @@ export default function Home() {
                   <Animated.View style={animStyle(sectionAnims[1])}>
                     <Card>
                       <CardHeader
-                        title="Safety alerts (near you)"
+                        title="Safety alerts"
                         tone="destructive"
                         actionLabel="See all"
                         onAction={goCitizenAlerts}
