@@ -1,7 +1,7 @@
 // app/(app)/lost-found/view.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { ActivityIndicator, Animated, Pressable, ScrollView, View } from "react-native";
 
 import { Text } from "@/components/ui/text";
@@ -19,13 +19,14 @@ import {
 import useMountAnimation from "@/hooks/useMountAnimation";
 import { getFoundItem, getLostItem, FoundItemDetail, LostItemDetail } from "@/lib/api";
 
+type Section = "pending" | "searching" | "returned";
+const isSection = (v: any): v is Section => v === "pending" || v === "searching" || v === "returned";
+
 export default function LostFoundView() {
-  const { id, type, role } = useLocalSearchParams<{ id: string; type: "found" | "lost"; role?: string }>();
+  const { id, type, role, tab: tabParam } = useLocalSearchParams<{ id: string; type: "found" | "lost"; role?: string; tab?: string }>();
   const navigation = useNavigation<any>();
-  const goBack = () => {
-    if (navigation?.canGoBack?.()) navigation.goBack();
-    else router.replace({ pathname: "/home", params: { role: role === "officer" ? "officer" : "citizen" } });
-  };
+
+  const backTab: Section | undefined = isSection(tabParam) ? (tabParam as Section) : undefined;
 
   const { value: mount } = useMountAnimation();
   const animStyle = {
@@ -78,12 +79,22 @@ export default function LostFoundView() {
     load();
   }, [id, type]);
 
-  const section = useMemo(() => {
+  const section = useMemo<Section | undefined>(() => {
     if (type !== "lost") return undefined;
+    if (!item && backTab) return backTab;
     if (status === "Returned") return "returned";
     if (status === "New" || status === "In Review") return "pending";
     return "searching"; // Approved, Assigned, Searching
-  }, [status, type]);
+  }, [backTab, item, status, type]);
+
+  const goBack = useCallback(() => {
+    if (navigation?.canGoBack?.()) navigation.goBack();
+    else if (role === "officer" && type === "lost") {
+      router.replace({ pathname: "/lost-found/officer-lost", params: { role, tab: backTab ?? section } });
+    } else {
+      router.replace({ pathname: "/home", params: { role: role === "officer" ? "officer" : "citizen" } });
+    }
+  }, [navigation, role, type, backTab, section]);
 
   const canApproveReject = role === "officer" && section === "pending";
   const canUpdateStatus = role === "officer" && section === "searching";
@@ -106,11 +117,6 @@ export default function LostFoundView() {
       lastLocation: item.lastLocation ?? "",
     });
     setEditing(false);
-  };
-
-  const onDelete = () => {
-    toast.success("Item deleted");
-    goBack();
   };
 
   const onApprove = () => {
@@ -193,7 +199,7 @@ export default function LostFoundView() {
           {type === "lost" && "status" in item ? renderField("Status", status) : null}
         </Animated.View>
 
-        {(role === "officer" || role === "citizen") ? (
+        {role === "citizen" ? (
           <View className="flex-row flex-wrap items-center gap-2 mt-4">
             {editing ? (
               <>
@@ -205,18 +211,9 @@ export default function LostFoundView() {
                 </Button>
               </>
             ) : (
-              <>
-                <Button variant="secondary" onPress={() => setEditing(true)} className="px-4 h-10 rounded-lg">
-                  <Text className="text-foreground">Edit</Text>
-                </Button>
-                {role === "officer" ? (
-                  <Button variant="secondary" onPress={onDelete} className="px-4 h-10 rounded-lg">
-                    <Text className="text-[13px]" style={{ color: "#DC2626" }}>
-                      Delete
-                    </Text>
-                  </Button>
-                ) : null}
-              </>
+              <Button variant="secondary" onPress={() => setEditing(true)} className="px-4 h-10 rounded-lg">
+                <Text className="text-foreground">Edit</Text>
+              </Button>
             )}
           </View>
         ) : null}
