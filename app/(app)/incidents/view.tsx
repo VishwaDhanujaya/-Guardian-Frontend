@@ -106,12 +106,13 @@ export default function ViewIncident() {
   const [newNoteHeight, setNewNoteHeight] = useState<number | undefined>(undefined);
   const [notifyCitizen, setNotifyCitizen] = useState(true);
 
-  // SECTION for UI permissions: derive from *current status* (so actions update as status changes)
+  // SECTION for UI permissions: base on current status but respect incoming tab before load
   const section: Section = useMemo<Section>(() => {
+    if (!report && backTab) return backTab;
     if (status === "Resolved") return "solved";
     if (status === "New" || status === "In Review") return "pending";
     return "ongoing"; // Approved, Assigned, Ongoing
-  }, [status]);
+  }, [backTab, report, status]);
 
   // Officer permissions per section
   const canApproveReject = role === "officer" && section === "pending" && (status === "New" || status === "In Review");
@@ -161,6 +162,7 @@ export default function ViewIncident() {
     setNotes((arr) => [...arr, next]);
     setNewNoteDraft("");
     setNewNoteHeight(undefined);
+    setShowNotes(false);
     toast.success(notifyCitizen && role === "officer" ? "Note added and citizen notified" : "Note added");
   };
 
@@ -386,7 +388,8 @@ export default function ViewIncident() {
             </Animated.View>
           ) : null}
 
-          {/* Notes (citizen-visible): list always shown; composer only if officer can add (ongoing/solved) */}
+          {/* Notes (citizen-visible): only render if notes exist or officer can add */}
+          {(notes.length > 0 || canAddNotes) ? (
           <Animated.View className="bg-muted rounded-2xl border border-border mt-4 overflow-hidden" style={animStyle}>
             {/* Header */}
             <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
@@ -472,6 +475,7 @@ export default function ViewIncident() {
               </>
             ) : null}
           </Animated.View>
+          ) : null}
 
           {/* Citizen reassurance footer */}
           {role === "citizen" ? (
