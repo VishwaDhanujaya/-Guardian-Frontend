@@ -1,8 +1,9 @@
 // app/(app)/alerts/manage.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     Animated,
     Keyboard,
     Pressable,
@@ -13,6 +14,8 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { fetchAlerts, AlertRow } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 import {
     ChevronLeft,
@@ -25,13 +28,6 @@ import {
 
 type Role = "citizen" | "officer";
 
-type AlertRow = {
-  id: string;
-  title: string;
-  message: string;
-  region: string;     // e.g., branch / area
-};
-
 export default function ManageAlerts() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
@@ -43,32 +39,31 @@ export default function ManageAlerts() {
   }, [navigation, resolvedRole]);
 
   // Entrance animation
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
-  // Mock alerts (Active-only list)
-  const [rows, setRows] = useState<AlertRow[]>([
-    { id: "a1", title: "Road closure at Main St", message: "Main St closed 9–12 for parade. Use 5th Ave detour.", region: "Central Branch" },
-    { id: "a2", title: "Severe weather advisory", message: "Heavy rains expected. Avoid low-lying roads.", region: "West Branch" },
-  ]);
+  const [rows, setRows] = useState<AlertRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAlerts()
+      .then(setRows)
+      .catch(() => toast.error("Failed to load alerts"))
+      .finally(() => setLoading(false));
+  }, []);
 
   const visibleRows = useMemo(() => [...rows], [rows]);
 
   // Navigation
-  const createNew = () => router.push({ pathname: "/(app)/alerts/edit", params: { role: "officer" } });
-  const editAlert = (id: string) => router.push({ pathname: "/(app)/alerts/edit", params: { role: "officer", id } });
+  const createNew = () => router.push({ pathname: "/alerts/edit", params: { role: "officer" } });
+  const editAlert = (id: string) => router.push({ pathname: "/alerts/edit", params: { role: "officer", id } });
 
   // Actions
   const deleteAlert = (id: string) =>
@@ -118,7 +113,12 @@ export default function ManageAlerts() {
 
           {/* Alerts list */}
           <Animated.View className="mt-4" style={animStyle}>
-            {visibleRows.length === 0 ? (
+            {loading ? (
+              <View className="bg-muted rounded-2xl border border-border p-6 items-center">
+                <ActivityIndicator color="#0F172A" />
+                <Text className="text-xs text-muted-foreground mt-2">Loading alerts...</Text>
+              </View>
+            ) : visibleRows.length === 0 ? (
               <View className="bg-muted rounded-2xl border border-border p-6 items-center">
                 <Megaphone size={28} color="#0F172A" />
                 <Text className="mt-3 font-semibold text-foreground">No alerts</Text>

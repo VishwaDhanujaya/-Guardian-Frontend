@@ -1,7 +1,7 @@
 // app/(auth)/register.tsx
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, Image, Keyboard, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { ActivityIndicator, Animated, Image, Keyboard, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import Logo from "@/assets/images/icon.png";
@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { Lock, Mail, UserRound } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { registerUser } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * Citizen account registration screen.
@@ -25,6 +28,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Focus chain
   const lastNameRef = useRef<any>(null);
@@ -40,27 +44,34 @@ export default function Register() {
     confirm === password;
 
   /**
-   * Submit registration (stub).
-   * Replace with API integration and error handling as needed.
-   * Shows greeting using first name.
+   * Submit registration via mock backend.
    */
-  const onSignUp = (): void => {
-    if (!canSubmit) return;
-    toast.success(`Welcome, ${firstName.trim()}!`);
-    router.replace("/login");
+  const onSignUp = async (): Promise<void> => {
+    if (!canSubmit || loading) return;
+    try {
+      setLoading(true);
+      const res = await registerUser({
+        firstName: sanitize(firstName),
+        lastName: sanitize(lastName),
+        email: sanitize(email),
+        password,
+      });
+      await AsyncStorage.setItem("authToken", res.token);
+      toast.success(`Welcome, ${res.user.name}!`);
+      router.replace({ pathname: "/home", params: { role: "citizen" } });
+    } catch (e: any) {
+      toast.error(e.message ?? "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Entrance motion for form
-  const formAnim = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(formAnim, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [formAnim]);
+  const { value: formAnim } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
 
   const formOpacity = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] });
   const formTranslateY = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });
@@ -232,9 +243,13 @@ export default function Register() {
               size="lg"
               variant="default"
               className="mt-1 h-12 rounded-xl"
-              disabled={!canSubmit}
+              disabled={!canSubmit || loading}
             >
-              <Text className="font-semibold text-primary-foreground">Create account</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="font-semibold text-primary-foreground">Create account</Text>
+              )}
             </Button>
           </Animated.View>
 

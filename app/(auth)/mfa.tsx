@@ -2,6 +2,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Image,
@@ -17,6 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { verifyMfa } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * MFA verification screen.
@@ -29,22 +33,25 @@ export default function Mfa() {
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isValid = code.length === 6;
 
   /**
-   * Verify the provided code and navigate on success.
-   * Uses a demo code for now; replace with backend validation.
+   * Verify the provided code via mock backend.
    */
-  const onVerify = (): void => {
-    if (code === "123456") {
+  const onVerify = async (): Promise<void> => {
+    if (!isValid || loading) return;
+    try {
+      setLoading(true);
+      const res = await verifyMfa(code, role === "officer" ? "officer" : "citizen");
+      await AsyncStorage.setItem("authToken", res.token);
       toast.success("Verified");
-      router.replace({
-        pathname: "/home",
-        params: { role: role === "officer" ? "officer" : "citizen" },
-      });
-    } else {
-      toast.error("Invalid code");
+      router.replace({ pathname: "/home", params: { role: res.user.role } });
+    } catch (e: any) {
+      toast.error(e.message ?? "Invalid code");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,18 +83,12 @@ export default function Mfa() {
   }, [cooldown]);
 
   // Motion: form entrance + subtitle cross-fade
-  const formAnim = useRef(new Animated.Value(0.9)).current;
+  const { value: formAnim } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const subtitleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.spring(formAnim, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [formAnim]);
 
   useEffect(() => {
     subtitleAnim.setValue(0);
@@ -176,9 +177,13 @@ export default function Mfa() {
               size="lg"
               variant="default"
               className="mt-1 h-12 rounded-xl"
-              disabled={!isValid}
+              disabled={!isValid || loading}
             >
-              <Text className="font-semibold text-primary-foreground">Verify</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="font-semibold text-primary-foreground">Verify</Text>
+              )}
             </Button>
 
             {/* Resend */}
