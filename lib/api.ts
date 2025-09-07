@@ -45,6 +45,7 @@ export async function loginUser(
 export async function registerUser(data: {
   firstName: string;
   lastName: string;
+  username: string;
   email: string;
   password: string;
 }): Promise<AuthResponse> {
