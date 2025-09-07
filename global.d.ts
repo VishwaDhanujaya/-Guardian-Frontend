@@ -27,5 +27,29 @@ declare module '*.svg' {
 }
 
 declare module '@react-native-async-storage/async-storage';
-declare module 'expo-symbols';
+declare module 'expo-symbols' {
+  import { ComponentType } from 'react';
+  import { ViewProps } from 'react-native';
+
+  export type SymbolWeight =
+    | 'ultralight'
+    | 'thin'
+    | 'light'
+    | 'regular'
+    | 'medium'
+    | 'semibold'
+    | 'bold'
+    | 'heavy'
+    | 'black';
+
+  export interface SymbolViewProps extends ViewProps {
+    name: string;
+    size?: number;
+    weight?: SymbolWeight;
+    tintColor?: string;
+    resizeMode?: string;
+  }
+
+  export const SymbolView: ComponentType<SymbolViewProps>;
+}
 declare module 'expo-blur';

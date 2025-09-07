@@ -17,13 +17,14 @@ import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * Citizen account registration screen.
- * - Collects first/last name, email, and password.
+ * - Collects first/last name, username, email, and password.
  * - Basic client-side validation (length, match).
  * - Navigates to Login after successful submission (stub).
  */
 export default function Register() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -32,6 +33,7 @@ export default function Register() {
 
   // Focus chain
   const lastNameRef = useRef<any>(null);
+  const usernameRef = useRef<any>(null);
   const emailRef = useRef<any>(null);
   const passwordRef = useRef<any>(null);
   const confirmRef = useRef<any>(null);
@@ -39,6 +41,7 @@ export default function Register() {
   const canSubmit =
     firstName.trim().length > 1 &&
     lastName.trim().length > 1 &&
+    username.trim().length > 2 &&
     email.trim().length > 3 &&
     password.length >= 6 &&
     confirm === password;
@@ -53,6 +56,7 @@ export default function Register() {
       const res = await registerUser({
         firstName: sanitize(firstName),
         lastName: sanitize(lastName),
+        username: sanitize(username),
         email: sanitize(email),
         password,
       });
@@ -145,6 +149,29 @@ export default function Register() {
                   onChangeText={setLastName}
                   onBlur={() => setLastName((v) => sanitize(v))}
                   placeholder="Johnson"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => usernameRef.current?.focus()}
+                  className="bg-background h-12 rounded-xl pl-9"
+                />
+              </View>
+            </View>
+
+            {/* Username */}
+            <View className="gap-1">
+              <Label nativeID="usernameLabel" className="text-xs">
+                <Text className="text-xs text-foreground">Username</Text>
+              </Label>
+              <View className="relative">
+                <UserRound size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 14 }} />
+                <Input
+                  ref={usernameRef}
+                  aria-labelledby="usernameLabel"
+                  value={username}
+                  onChangeText={setUsername}
+                  onBlur={() => setUsername((v) => sanitize(v))}
+                  autoCapitalize="none"
+                  placeholder="alexj"
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onSubmitEditing={() => emailRef.current?.focus()}
