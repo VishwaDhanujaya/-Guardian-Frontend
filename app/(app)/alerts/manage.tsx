@@ -67,8 +67,8 @@ export default function ManageAlerts() {
   const visibleRows = useMemo(() => [...rows], [rows]);
 
   // Navigation
-  const createNew = () => router.push({ pathname: "/(app)/alerts/edit", params: { role: "officer" } });
-  const editAlert = (id: string) => router.push({ pathname: "/(app)/alerts/edit", params: { role: "officer", id } });
+  const createNew = () => router.push({ pathname: "/alerts/edit", params: { role: "officer" } });
+  const editAlert = (id: string) => router.push({ pathname: "/alerts/edit", params: { role: "officer", id } });
 
   // Actions
   const deleteAlert = (id: string) =>

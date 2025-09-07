@@ -24,7 +24,7 @@ export default function EditAlert() {
   const navigation = useNavigation<any>();
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
-    else router.replace({ pathname: "/(app)/alerts/manage", params: { role: resolvedRole } });
+    else router.replace({ pathname: "/alerts/manage", params: { role: resolvedRole } });
   }, [navigation, resolvedRole]);
 
   // Entrance animation
@@ -74,7 +74,7 @@ export default function EditAlert() {
     try {
       await saveAlert({ id: existing?.id, title, message, region });
       toast.success(existing?.id ? "Alert updated" : "Alert created");
-      router.replace({ pathname: "/(app)/alerts/manage", params: { role: "officer" } });
+      router.replace({ pathname: "/alerts/manage", params: { role: "officer" } });
     } catch (e) {
       toast.error("Failed to save alert");
     }
