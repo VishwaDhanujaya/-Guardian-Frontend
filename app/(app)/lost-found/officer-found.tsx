@@ -137,10 +137,10 @@ export default function OfficerFound() {
                   <Input placeholder="Item name*" value={name} onChangeText={setName} />
                   <Input placeholder="Description" value={desc} onChangeText={setDesc} />
                   <Input placeholder="Model" value={model} onChangeText={setModel} />
-                  <Input placeholder="Serial (optional)" value={serial} onChangeText={setSerial} />
-                  <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
+                  <Input placeholder="Serial/IMEI (optional)" value={serial} onChangeText={setSerial} />
                   <Input placeholder="Colour" value={color} onChangeText={setColor} />
                   <Input placeholder="Police branch" value={branch} onChangeText={setBranch} />
+                  <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
                 </View>
 
                 <View className="flex-row items-center justify-end gap-2 mt-3">

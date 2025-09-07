@@ -24,7 +24,6 @@ import {
   EyeOff,
   IdCard,
   Lock,
-  Mail,
   Shield,
   UserRound,
 } from "lucide-react-native";
@@ -35,7 +34,7 @@ type Role = "citizen" | "officer";
 
 /**
  * Login screen for Guardian.
- * - Roles: Citizen (email) and Officer (numeric ID).
+ * - Roles: Citizen (username) and Officer (numeric ID).
  * - Animated role switcher and form transitions.
  * - Basic validation + navigation stubs.
  */
@@ -96,7 +95,7 @@ export default function Login() {
    * - Citizen: collapse internal whitespace and trim.
    */
   const sanitizeIdentifier = (value: string): string => {
-    return isOfficer ? value.replace(/\D+/g, "") : value.trim().replace(/\s+/g, " ");
+    return isOfficer ? value.replace(/\D+/g, "") : value.replace(/\s+/g, "");
   };
 
   /**
@@ -123,7 +122,7 @@ export default function Login() {
     }
   };
 
-  const IdentifierIcon = isOfficer ? IdCard : Mail;
+  const IdentifierIcon = isOfficer ? IdCard : UserRound;
 
   return (
     <KeyboardAwareScrollView
@@ -201,7 +200,7 @@ export default function Login() {
                   }}
                   className="text-xs text-foreground"
                 >
-                  {isOfficer ? "Officer ID" : "Email"}
+                  {isOfficer ? "Officer ID" : "Username"}
                 </Animated.Text>
               </Label>
 
@@ -211,16 +210,16 @@ export default function Login() {
                   aria-labelledby="identifierLabel"
                   value={identifier}
                   onChangeText={(text) => {
-                    setIdentifier(isOfficer ? text.replace(/\D+/g, "") : text.replace(/\s+/g, " "));
+                    setIdentifier(isOfficer ? text.replace(/\D+/g, "") : text.replace(/\s+/g, ""));
                   }}
                   onBlur={() => setIdentifier((prev) => sanitizeIdentifier(prev))}
                   autoCapitalize="none"
-                  autoComplete={isOfficer ? "off" : "email"}
-                  keyboardType={isOfficer ? "number-pad" : "email-address"}
+                  autoComplete={isOfficer ? "off" : "username"}
+                  keyboardType={isOfficer ? "number-pad" : "default"}
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onSubmitEditing={() => passwordRef.current?.focus()}
-                  placeholder={isOfficer ? "000000" : "m@example.com"}
+                  placeholder={isOfficer ? "000000" : "username"}
                   className="bg-background h-12 rounded-xl pl-9"
                 />
               </View>

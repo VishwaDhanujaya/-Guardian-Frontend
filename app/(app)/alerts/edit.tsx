@@ -83,7 +83,6 @@ export default function EditAlert() {
 
   const onSave = async () => {
     if (!canSave || saving) {
-
       toast.error("Please fill all required fields");
       return;
     }
