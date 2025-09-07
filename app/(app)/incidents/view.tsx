@@ -161,6 +161,7 @@ export default function ViewIncident() {
     setNotes((arr) => [...arr, next]);
     setNewNoteDraft("");
     setNewNoteHeight(undefined);
+    setShowNotes(false);
     toast.success(notifyCitizen && role === "officer" ? "Note added and citizen notified" : "Note added");
   };
 
@@ -386,7 +387,8 @@ export default function ViewIncident() {
             </Animated.View>
           ) : null}
 
-          {/* Notes (citizen-visible): list always shown; composer only if officer can add (ongoing/solved) */}
+          {/* Notes (citizen-visible): only render if notes exist or officer can add */}
+          {(notes.length > 0 || canAddNotes) ? (
           <Animated.View className="bg-muted rounded-2xl border border-border mt-4 overflow-hidden" style={animStyle}>
             {/* Header */}
             <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
@@ -472,6 +474,7 @@ export default function ViewIncident() {
               </>
             ) : null}
           </Animated.View>
+          ) : null}
 
           {/* Citizen reassurance footer */}
           {role === "citizen" ? (
