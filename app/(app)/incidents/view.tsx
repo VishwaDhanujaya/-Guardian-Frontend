@@ -9,6 +9,7 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { getIncident, Note, Report } from "@/lib/api";
 
 import {
   AlertTriangle,
@@ -31,22 +32,6 @@ type Priority = "Urgent" | "Normal" | "Low";
 type Status = "New" | "In Review" | "Approved" | "Assigned" | "Ongoing" | "Resolved";
 type Section = "pending" | "ongoing" | "solved";
 
-type Note = { id: string; text: string; at: string; by: string };
-
-type Report = {
-  id: string;
-  title: string;
-  category: "Safety" | "Crime" | "Maintenance" | "Other";
-  location: string;
-  reportedBy: string;
-  reportedAt: string; // human string for demo
-  status: Status;
-  priority: Priority;
-  description?: string;
-  notes: Note[];
-};
-
-/** Mock fetch by id (replace with real API) */
 function getMockReport(id: string): Report {
   return {
     id,
@@ -88,13 +73,35 @@ export default function ViewIncident() {
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
-  // Load (mock)
-  const initial = useMemo(() => getMockReport(id || "unknown"), [id]);
+  // Mock report for testing
+  const mockReport = useMemo(() => (id ? getMockReport(id) : null), [id]);
 
-  // Local state
-  const [status, setStatus] = useState<Status>(initial.status);
-  const [priority] = useState<Priority>(initial.priority);
-  const [notes, setNotes] = useState<Note[]>(initial.notes ?? []);
+  // Load report
+  const [report, setReport] = useState<Report | null>(null);
+  const [status, setStatus] = useState<Status>("New");
+  const [priority, setPriority] = useState<Priority>("Normal");
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loadError, setLoadError] = useState(false);
+
+  const load = useCallback(() => {
+    if (!id) return;
+    setLoadError(false);
+    setReport(null);
+    getIncident(id)
+      .then((data) => {
+        setReport(data);
+        setStatus(data.status);
+        setPriority(data.priority);
+        setNotes(data.notes ?? []);
+      })
+      .catch(() => {
+        setLoadError(true);
+      });
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
   const [showUpdate, setShowUpdate] = useState<boolean>(false);
   const [showNotes, setShowNotes] = useState<boolean>(false);
 
@@ -177,12 +184,55 @@ export default function ViewIncident() {
       ? "text-primary"
       : "text-foreground";
 
+  if (loadError && !report) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+        <Text className="text-foreground mb-4">Failed to load report.</Text>
+        <View className="flex-row items-center gap-2">
+          <Button onPress={load} className="h-10 px-3 rounded-lg">
+            <Text className="text-primary-foreground">Retry</Text>
+          </Button>
+          {mockReport ? (
+            <Button
+              variant="secondary"
+              onPress={() => {
+                setReport(mockReport);
+                setStatus(mockReport.status);
+                setPriority(mockReport.priority);
+                setNotes(mockReport.notes);
+                setLoadError(false);
+              }}
+              className="h-10 px-3 rounded-lg"
+            >
+              <Text className="text-foreground">Use mock</Text>
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            onPress={goBack}
+            className="h-10 px-3 rounded-lg"
+          >
+            <Text className="text-foreground">Back</Text>
+          </Button>
+        </View>
+      </View>
+    );
+  }
+
+  if (!report) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+        <Text className="text-foreground">Loading...</Text>
+      </View>
+    );
+  }
+
   const catIcon = {
     Safety: ShieldAlert,
     Crime: AlertTriangle,
     Maintenance: PackageSearch,
     Other: Info,
-  }[initial.category];
+  }[report.category];
 
   const PillIcon = prioPill(priority).Icon;
 
@@ -217,13 +267,13 @@ export default function ViewIncident() {
             {/* Title + status */}
             <View className="flex-row items-start justify-between gap-3">
               <View className="flex-1 pr-1">
-                <Text className="text-foreground text-base">{initial.title}</Text>
+                <Text className="text-foreground text-base">{report.title}</Text>
                 <View className="flex-row flex-wrap items-center gap-2 mt-1">
                   <View className="flex-row items-center gap-1">
                     <CalendarDays size={14} color="#0F172A" />
-                    <Text className="text-xs text-muted-foreground">{initial.reportedAt}</Text>
+                    <Text className="text-xs text-muted-foreground">{report.reportedAt}</Text>
                   </View>
-                  <Text className="text-xs text-muted-foreground">• By {initial.reportedBy}</Text>
+                  <Text className="text-xs text-muted-foreground">• By {report.reportedBy}</Text>
                 </View>
               </View>
               <View className="px-2 py-0.5 rounded-full bg-foreground/10">
@@ -235,11 +285,11 @@ export default function ViewIncident() {
             <View className="flex-row flex-wrap items-center gap-2">
               <View className="flex-row items-center gap-1 bg-background border border-border rounded-lg px-2 py-1">
                 {catIcon ? React.createElement(catIcon, { size: 14, color: "#0F172A" }) : <Info size={14} color="#0F172A" />}
-                <Text className="text-[12px] text-foreground">{initial.category}</Text>
+                <Text className="text-[12px] text-foreground">{report.category}</Text>
               </View>
               <View className="flex-row items-center gap-1 bg-background border border-border rounded-lg px-2 py-1">
                 <MapPin size={14} color="#0F172A" />
-                <Text className="text-[12px] text-foreground">{initial.location}</Text>
+                <Text className="text-[12px] text-foreground">{report.location}</Text>
               </View>
               <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${prioPill(priority).wrap}`}>
                 <PillIcon size={12} color="#0F172A" />
@@ -248,13 +298,13 @@ export default function ViewIncident() {
             </View>
 
             {/* Description */}
-            {initial.description ? (
+            {report.description ? (
               <View className="bg-background rounded-xl border border-border p-3">
                 <View className="flex-row items-center gap-2 mb-1">
                   <FileText size={14} color="#0F172A" />
                   <Text className="text-[12px] text-foreground">Description</Text>
                 </View>
-                <Text className="text-sm text-foreground">{initial.description}</Text>
+                <Text className="text-sm text-foreground">{report.description}</Text>
               </View>
             ) : null}
           </Animated.View>
