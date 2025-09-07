@@ -1,9 +1,8 @@
 // app/(app)/alerts/edit.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Animated, Keyboard, Pressable, View } from "react-native";
-
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { getAlert, saveAlert, AlertDraft } from "@/lib/api";
-
+import useMountAnimation from "@/hooks/useMountAnimation";
 import { ChevronLeft, Megaphone, Pencil, Save } from "lucide-react-native";
 
 type Role = "citizen" | "officer";
@@ -29,16 +28,11 @@ export default function EditAlert() {
   }, [navigation, resolvedRole]);
 
   // Entrance animation
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
@@ -84,19 +78,6 @@ export default function EditAlert() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (id) {
-      getAlert(id)
-        .then((data) => {
-          setExisting(data);
-          setTitle(data.title);
-          setMessage(data.message);
-          setRegion(data.region);
-        })
-        .catch(() => toast.error("Failed to load alert"));
-    }
-  }, [id]);
-
   // Validation
   const canSave = title.trim().length > 0 && message.trim().length > 0 && region.trim().length > 0;
 
@@ -108,7 +89,6 @@ export default function EditAlert() {
     }
     try {
       setSaving(true);
-
       await saveAlert({ id: existing?.id, title, message, region });
       toast.success(existing?.id ? "Alert updated" : "Alert created");
       router.replace({ pathname: "/alerts/manage", params: { role: "officer" } });
@@ -116,7 +96,6 @@ export default function EditAlert() {
       toast.error("Failed to save alert");
     } finally {
       setSaving(false);
-
     }
   };
 

@@ -1,6 +1,6 @@
 // app/(auth)/register.tsx
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { ActivityIndicator, Animated, Image, Keyboard, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import { Lock, Mail, UserRound } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { registerUser } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * Citizen account registration screen.
@@ -66,16 +67,11 @@ export default function Register() {
   };
 
   // Entrance motion for form
-  const formAnim = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(formAnim, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [formAnim]);
+  const { value: formAnim } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
 
   const formOpacity = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] });
   const formTranslateY = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });

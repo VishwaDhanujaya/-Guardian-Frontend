@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { verifyMfa } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * MFA verification screen.
@@ -82,18 +83,12 @@ export default function Mfa() {
   }, [cooldown]);
 
   // Motion: form entrance + subtitle cross-fade
-  const formAnim = useRef(new Animated.Value(0.9)).current;
+  const { value: formAnim } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const subtitleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.spring(formAnim, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [formAnim]);
 
   useEffect(() => {
     subtitleAnim.setValue(0);

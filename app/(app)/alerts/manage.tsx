@@ -1,7 +1,7 @@
 // app/(app)/alerts/manage.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Animated,
@@ -15,6 +15,7 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { fetchAlerts, AlertRow } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 import {
     ChevronLeft,
@@ -38,16 +39,11 @@ export default function ManageAlerts() {
   }, [navigation, resolvedRole]);
 
   // Entrance animation
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],

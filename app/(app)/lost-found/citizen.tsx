@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -16,6 +16,7 @@ import { Text } from "@/components/ui/text";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, PackageSearch, Plus } from "lucide-react-native";
 import { fetchFoundItems, reportLostItem, FoundItem } from "@/lib/api";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 type TabKey = "found" | "report";
 
@@ -32,10 +33,7 @@ export default function CitizenLostFound() {
     else router.replace("/home?role=citizen");
   };
 
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, { toValue: 1, useNativeDriver: true }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation();
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
@@ -75,7 +73,6 @@ export default function CitizenLostFound() {
     } finally {
       setSubmitting(false);
     }
-
   };
 
   const TabBtn = ({ k, label }: { k: TabKey; label: string }) => {
