@@ -15,10 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import useMountAnimation from "@/hooks/useMountAnimation";
+import { fetchFoundItems, FoundItem, reportLostItem } from "@/lib/api";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, PackageSearch, Plus, Search as SearchIcon, X } from "lucide-react-native";
-import { fetchFoundItems, reportLostItem, FoundItem } from "@/lib/api";
-import useMountAnimation from "@/hooks/useMountAnimation";
 
 export default function CitizenLostFound() {
   const navigation = useNavigation<any>();
@@ -152,7 +152,7 @@ export default function CitizenLostFound() {
           android_ripple={{ color: "rgba(255,255,255,0.2)", borderless: false }}
         >
           <Plus size={20} color="#FFFFFF" />
-          <Text className="font-semibold text-white">Add lost items</Text>
+          <Text className="font-semibold text-white">Report lost item</Text>
         </Pressable>
 
         <Modal visible={openForm} animationType="slide" onRequestClose={() => setOpenForm(false)}>
