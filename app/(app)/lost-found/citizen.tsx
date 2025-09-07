@@ -50,6 +50,7 @@ export default function CitizenLostFound() {
     f.meta.toLowerCase().includes(search.toLowerCase())
   );
 
+
   // lost form state
   const [itemName, setItemName] = useState("");
   const [desc, setDesc] = useState("");
@@ -57,7 +58,6 @@ export default function CitizenLostFound() {
   const [serial, setSerial] = useState("");
   const [color, setColor] = useState("");
   const [lastLoc, setLastLoc] = useState("");
-
   const resetForm = () => {
     setItemName("");
     setDesc("");
@@ -107,7 +107,7 @@ export default function CitizenLostFound() {
           </View>
           <View style={{ width: 56 }} />
         </View>
-
+        
         <Animated.View className="bg-muted rounded-md border border-border p-4 shadow-sm" style={animStyle}>
           <View className="relative mb-4">
             <SearchIcon
