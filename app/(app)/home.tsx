@@ -121,7 +121,7 @@ export default function Home() {
     []
   );
 
-  // OFFICER: manage safety alerts preview (replaces Announcements)
+  // OFFICER: manage safety alerts preview
   const safetyAlertsPreviewAll = useMemo(
     () => [
       { id: "s1", title: "Draft alert: Parade route", meta: "Needs review", icon: Megaphone, tone: "accent" as Tone },
@@ -200,7 +200,7 @@ export default function Home() {
   const goManageIncidentsPending = () =>
     router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } }); // Officer: land on Pending
 
-  // NEW: Lost & Found routes
+  // Lost & Found routes
   const goLostFoundCitizen = () =>
     router.push({ pathname: "/(app)/lost-found/citizen", params: { role, tab: "found" } });
 
@@ -210,8 +210,14 @@ export default function Home() {
   const goOfficerFound = () =>
     router.push({ pathname: "/(app)/lost-found/officer-found", params: { role } });
 
+  // Safety alerts routes
+  const goCitizenAlerts = () =>
+    router.push({ pathname: "/(app)/alerts/citizen", params: { role } });
+
+  const goManageAlerts = () =>
+    router.push({ pathname: "/(app)/alerts/manage", params: { role } });
+
   const goMyReports = () => router.push({ pathname: "/(app)/incidents/my-reports", params: { role } });
-  const goManageAlerts = () => router.push({ pathname: "/(app)/alerts/manage", params: { role } });
 
   return (
     <KeyboardAvoidingView
@@ -289,14 +295,14 @@ export default function Home() {
                   <Animated.View style={animStyle(sectionAnims[1])}>
                     <Card>
                       <CardHeader title="Manage" tone="primary" />
+                      {/* Order controls left/right columns:
+                          0 (left), 1 (right), 2 (left), 3 (right) */}
                       <TileGrid
                         tiles={[
-                          // Officer: go straight to Manage Incidents → Pending
-                          { label: "Manage incidents", icon: Shield, onPress: goManageIncidentsPending, count: counts.incidents },
-                          // Officer Lost & Found split into two
-                          { label: "Lost items", icon: PackageSearch, onPress: goOfficerLostPending, variant: "secondary", count: counts.lostFound },
-                          { label: "Found items", icon: PackageSearch, onPress: goOfficerFound, variant: "secondary" },
-                          { label: "Safety alerts", icon: BellRing, onPress: goManageAlerts, count: counts.alerts },
+                          { label: "Manage incidents", icon: Shield, onPress: goManageIncidentsPending, count: counts.incidents }, // left row 1
+                          { label: "Lost items", icon: PackageSearch, onPress: goOfficerLostPending, variant: "secondary", count: counts.lostFound }, // right row 1
+                          { label: "Safety alerts", icon: BellRing, onPress: goManageAlerts, count: counts.alerts }, // left row 2
+                          { label: "Found items", icon: PackageSearch, onPress: goOfficerFound, variant: "secondary" }, // right row 2
                         ]}
                       />
                     </Card>
@@ -305,7 +311,6 @@ export default function Home() {
                   <Animated.View style={animStyle(sectionAnims[2])}>
                     <Card>
                       <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={goManageIncidentsPending} />
-                      {/* Pending incidents only: each item routes to Manage Incidents → Pending */}
                       <List
                         items={officerQueue}
                         className="mt-2"
@@ -343,7 +348,7 @@ export default function Home() {
                           { label: "Report incident", icon: ShieldPlus, onPress: goIncidentsIndex },
                           { label: "Lost & found", icon: PackageSearch, onPress: goLostFoundCitizen, variant: "secondary", count: counts.lostFound },
                           { label: "My reports", icon: ClipboardList, onPress: goMyReports, count: 1 },
-                          { label: "Safety alerts", icon: BellRing, onPress: () => {}, variant: "secondary", count: counts.alerts },
+                          { label: "Safety alerts", icon: BellRing, onPress: goCitizenAlerts, variant: "secondary", count: counts.alerts },
                         ]}
                       />
                     </Card>
@@ -351,7 +356,7 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[1])}>
                     <Card>
-                      <CardHeader title="Safety alerts (near you)" tone="destructive" actionLabel="See all" onAction={() => {}} />
+                      <CardHeader title="Safety alerts (near you)" tone="destructive" actionLabel="See all" onAction={goCitizenAlerts} />
                       <FilterChips
                         options={["All", "Road", "Weather", "Maintenance"]}
                         active={alertFilter}
@@ -710,7 +715,7 @@ const ChatbotWidget: React.FC<{
             </Text>
           </View>
 
-          <View className="flex-row items-center gap-2 mt-3">
+        <View className="flex-row items-center gap-2 mt-3">
             <Label nativeID="chatInput" className="hidden">
               <Text>Message</Text>
             </Label>
@@ -731,4 +736,4 @@ const ChatbotWidget: React.FC<{
       </View>
     </View>
   );
-};
+}
