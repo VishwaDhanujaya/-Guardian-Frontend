@@ -106,12 +106,13 @@ export default function ViewIncident() {
   const [newNoteHeight, setNewNoteHeight] = useState<number | undefined>(undefined);
   const [notifyCitizen, setNotifyCitizen] = useState(true);
 
-  // SECTION for UI permissions: derive from *current status* (so actions update as status changes)
+  // SECTION for UI permissions: base on current status but respect incoming tab before load
   const section: Section = useMemo<Section>(() => {
+    if (!report && backTab) return backTab;
     if (status === "Resolved") return "solved";
     if (status === "New" || status === "In Review") return "pending";
     return "ongoing"; // Approved, Assigned, Ongoing
-  }, [status]);
+  }, [backTab, report, status]);
 
   // Officer permissions per section
   const canApproveReject = role === "officer" && section === "pending" && (status === "New" || status === "In Review");

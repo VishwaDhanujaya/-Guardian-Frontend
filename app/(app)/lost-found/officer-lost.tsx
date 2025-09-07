@@ -306,7 +306,10 @@ export default function OfficerLost() {
                     >
                       <Pressable
                         onPress={() =>
-                          router.push({ pathname: "/lost-found/view", params: { id: r.id, type: "lost", role: "officer" } })
+                          router.push({
+                            pathname: "/lost-found/view",
+                            params: { id: r.id, type: "lost", role: "officer", tab: activeTab },
+                          })
                         }
                       >
                         {/* Header: responsive to avoid overlap */}
