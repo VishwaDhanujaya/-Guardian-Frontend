@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Keyboard, Pressable, View } from "react-native";
+
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { toast } from "@/components/toast";
@@ -83,16 +84,31 @@ export default function EditAlert() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (id) {
+      getAlert(id)
+        .then((data) => {
+          setExisting(data);
+          setTitle(data.title);
+          setMessage(data.message);
+          setRegion(data.region);
+        })
+        .catch(() => toast.error("Failed to load alert"));
+    }
+  }, [id]);
+
   // Validation
   const canSave = title.trim().length > 0 && message.trim().length > 0 && region.trim().length > 0;
 
   const onSave = async () => {
     if (!canSave || saving) {
+
       toast.error("Please fill all required fields");
       return;
     }
     try {
       setSaving(true);
+
       await saveAlert({ id: existing?.id, title, message, region });
       toast.success(existing?.id ? "Alert updated" : "Alert created");
       router.replace({ pathname: "/alerts/manage", params: { role: "officer" } });
@@ -100,6 +116,7 @@ export default function EditAlert() {
       toast.error("Failed to save alert");
     } finally {
       setSaving(false);
+
     }
   };
 

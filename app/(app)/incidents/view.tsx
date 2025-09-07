@@ -48,6 +48,7 @@ function getMockReport(id: string): Report {
   };
 }
 
+
 export default function ViewIncident() {
   const { id, role: roleParam, tab: tabParam } = useLocalSearchParams<{ id?: string; role?: string; tab?: string }>();
   const role: Role = roleParam === "officer" ? "officer" : "citizen";
@@ -76,6 +77,7 @@ export default function ViewIncident() {
   // Mock report for testing
   const mockReport = useMemo(() => (id ? getMockReport(id) : null), [id]);
 
+
   // Load report
   const [report, setReport] = useState<Report | null>(null);
   const [status, setStatus] = useState<Status>("New");
@@ -102,6 +104,7 @@ export default function ViewIncident() {
   useEffect(() => {
     load();
   }, [load]);
+
   const [showUpdate, setShowUpdate] = useState<boolean>(false);
   const [showNotes, setShowNotes] = useState<boolean>(false);
 

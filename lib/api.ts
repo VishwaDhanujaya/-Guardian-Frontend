@@ -144,7 +144,7 @@ export async function saveAlert(data: AlertDraft): Promise<AlertDraft> {
   return { ...data, id: data.id ?? 'new-alert' };
 }
 
-// Incidents
+// Incident
 export type Note = { id: string; text: string; at: string; by: string };
 
 export type Report = {
