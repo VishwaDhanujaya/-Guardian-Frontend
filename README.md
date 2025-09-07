@@ -8,6 +8,12 @@ It was initialized using the following command:
 npx react-native-reusables/cli@latest init -t .
 ```
 
+## Recent Updates
+
+- Refined the color palette for improved contrast while retaining existing tokens.
+- Simplified the citizen safety alerts preview by removing category filters.
+- Added a username field to the citizen sign-up flow.
+
 ## Getting Started
 
 To run the development server:

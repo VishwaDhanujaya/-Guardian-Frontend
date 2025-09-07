@@ -1,6 +1,6 @@
 // app/home.tsx
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -10,16 +10,15 @@ import {
   RefreshControl,
   ScrollView,
   View,
-} from "react-native";
+} from 'react-native';
 
-import { toast } from "@/components/toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Text } from "@/components/ui/text";
-import { toast } from "@/components/toast";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fetchProfile } from "@/lib/api";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Text } from '@/components/ui/text';
+import { toast } from '@/components/toast';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fetchProfile } from '@/lib/api';
 
 import {
   AlertTriangle,
@@ -40,33 +39,33 @@ import {
   TrendingDown,
   TrendingUp,
   X,
-} from "lucide-react-native";
+} from 'lucide-react-native';
 
-type Role = "citizen" | "officer";
+type Role = 'citizen' | 'officer';
 type IconType = React.ComponentType<{ size?: number; color?: string }>;
-type Tone = "primary" | "ring" | "accent" | "destructive" | "foreground";
+type Tone = 'primary' | 'ring' | 'accent' | 'destructive' | 'foreground';
 
 /** Tailwind tone → class maps (BG/Text variants and faint BG) */
 const TONE_BG: Record<Tone, string> = {
-  primary: "bg-primary",
-  ring: "bg-ring",
-  accent: "bg-accent",
-  destructive: "bg-destructive",
-  foreground: "bg-foreground",
+  primary: 'bg-primary',
+  ring: 'bg-ring',
+  accent: 'bg-accent',
+  destructive: 'bg-destructive',
+  foreground: 'bg-foreground',
 };
 const TONE_TEXT: Record<Tone, string> = {
-  primary: "text-primary",
-  ring: "text-ring",
-  accent: "text-accent",
-  destructive: "text-destructive",
-  foreground: "text-foreground",
+  primary: 'text-primary',
+  ring: 'text-ring',
+  accent: 'text-accent',
+  destructive: 'text-destructive',
+  foreground: 'text-foreground',
 };
 const TONE_BG_FAINT: Record<Tone, string> = {
-  primary: "bg-primary/10",
-  ring: "bg-ring/10",
-  accent: "bg-accent/10",
-  destructive: "bg-destructive/10",
-  foreground: "bg-foreground/10",
+  primary: 'bg-primary/10',
+  ring: 'bg-ring/10',
+  accent: 'bg-accent/10',
+  destructive: 'bg-destructive/10',
+  foreground: 'bg-foreground/10',
 };
 
 /**
@@ -77,7 +76,7 @@ const TONE_BG_FAINT: Record<Tone, string> = {
  */
 export default function Home() {
   const params = useLocalSearchParams<{ role?: string }>();
-  const role: Role = params.role === "officer" ? "officer" : "citizen";
+  const role: Role = params.role === 'officer' ? 'officer' : 'citizen';
 
   const [profile, setProfile] = useState<{ name: string } | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -86,16 +85,16 @@ export default function Home() {
   const now = new Date();
   const greeting = getGreeting(now.getHours());
   const dateStr = now.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 
   // Overview (mock) — ONLY pending + ongoing
   const overview = useMemo(() => ({ pendingReports: 5, ongoingReports: 7 }), []);
   const counts = useMemo(
     () =>
-      role === "officer"
+      role === 'officer'
         ? { incidents: 12, lostFound: 4, alerts: 3 }
         : { reportIncident: 0, lostFound: 2, myReports: 1, alerts: 3 },
     [role]
@@ -104,17 +103,54 @@ export default function Home() {
   // Lists (mock)
   const citizenAlertsAll = useMemo(
     () => [
-      { id: "a1", title: "Road closure at Main St", meta: "Until 6 PM", icon: AlertTriangle, tone: "destructive" as Tone, category: "Road" },
-      { id: "a2", title: "Weather advisory: heavy rain", meta: "Today", icon: BellRing, tone: "primary" as Tone, category: "Weather" },
-      { id: "a3", title: "Power maintenance: Sector 12", meta: "Tomorrow", icon: Megaphone, tone: "accent" as Tone, category: "Maintenance" },
+      // Categories removed – alerts now display without grouping
+      {
+        id: 'a1',
+        title: 'Road closure at Main St',
+        meta: 'Until 6 PM',
+        icon: AlertTriangle,
+        tone: 'destructive' as Tone,
+      },
+      {
+        id: 'a2',
+        title: 'Weather advisory: heavy rain',
+        meta: 'Today',
+        icon: BellRing,
+        tone: 'primary' as Tone,
+      },
+      {
+        id: 'a3',
+        title: 'Power maintenance: Sector 12',
+        meta: 'Tomorrow',
+        icon: Megaphone,
+        tone: 'accent' as Tone,
+      },
     ],
     []
   );
   const citizenRecentAll = useMemo(
     () => [
-      { id: "r1", title: "Reported: Streetlight outage", meta: "2h ago · #1245", icon: FileText, tone: "primary" as Tone },
-      { id: "r2", title: "Found item: Wallet", meta: "Yesterday", icon: PackageSearch, tone: "accent" as Tone },
-      { id: "r3", title: "Alert viewed: Rain advisory", meta: "Yesterday", icon: BellRing, tone: "ring" as Tone },
+      {
+        id: 'r1',
+        title: 'Reported: Streetlight outage',
+        meta: '2h ago · #1245',
+        icon: FileText,
+        tone: 'primary' as Tone,
+      },
+      {
+        id: 'r2',
+        title: 'Found item: Wallet',
+        meta: 'Yesterday',
+        icon: PackageSearch,
+        tone: 'accent' as Tone,
+      },
+      {
+        id: 'r3',
+        title: 'Alert viewed: Rain advisory',
+        meta: 'Yesterday',
+        icon: BellRing,
+        tone: 'ring' as Tone,
+      },
     ],
     []
   );
@@ -122,9 +158,27 @@ export default function Home() {
   // OFFICER: Incoming queue (PENDING INCIDENTS ONLY, routes to Manage Incidents → Pending)
   const officerQueue = useMemo(
     () => [
-      { id: "q1", title: "Overdue: Traffic accident", meta: "High · 1h", icon: AlertTriangle, tone: "destructive" as Tone },
-      { id: "q2", title: "New: Vandalism report", meta: "Medium · 10m", icon: FileText, tone: "primary" as Tone },
-      { id: "q3", title: "New: Suspicious activity", meta: "Medium · 5m", icon: ClipboardList, tone: "ring" as Tone },
+      {
+        id: 'q1',
+        title: 'Overdue: Traffic accident',
+        meta: 'High · 1h',
+        icon: AlertTriangle,
+        tone: 'destructive' as Tone,
+      },
+      {
+        id: 'q2',
+        title: 'New: Vandalism report',
+        meta: 'Medium · 10m',
+        icon: FileText,
+        tone: 'primary' as Tone,
+      },
+      {
+        id: 'q3',
+        title: 'New: Suspicious activity',
+        meta: 'Medium · 5m',
+        icon: ClipboardList,
+        tone: 'ring' as Tone,
+      },
     ],
     []
   );
@@ -132,29 +186,37 @@ export default function Home() {
   // OFFICER: manage safety alerts preview
   const safetyAlertsPreviewAll = useMemo(
     () => [
-      { id: "s1", title: "Draft alert: Parade route", meta: "Needs review", icon: Megaphone, tone: "accent" as Tone },
-      { id: "s2", title: "Scheduled: System maintenance", meta: "Sat 1–3 AM", icon: Clock, tone: "ring" as Tone },
+      {
+        id: 's1',
+        title: 'Draft alert: Parade route',
+        meta: 'Needs review',
+        icon: Megaphone,
+        tone: 'accent' as Tone,
+      },
+      {
+        id: 's2',
+        title: 'Scheduled: System maintenance',
+        meta: 'Sat 1–3 AM',
+        icon: Clock,
+        tone: 'ring' as Tone,
+      },
     ],
     []
   );
 
-  // Filters (citizen alerts only)
-  const [alertFilter, setAlertFilter] = useState<"All" | "Road" | "Weather" | "Maintenance">("All");
-  const citizenAlerts = useMemo(
-    () => (alertFilter === "All" ? citizenAlertsAll : citizenAlertsAll.filter((i) => i.category === alertFilter)),
-    [alertFilter, citizenAlertsAll]
-  );
+  // Citizen alert lists (no category filtering)
+  const citizenAlerts = citizenAlertsAll;
   const citizenRecent = citizenRecentAll;
 
   // Conditional alert banner
   const showBanner =
-    role === "officer"
-      ? officerQueue.some((i) => i.tone === "destructive")
-      : citizenAlertsAll.some((i) => i.tone === "destructive");
+    role === 'officer'
+      ? officerQueue.some((i) => i.tone === 'destructive')
+      : citizenAlertsAll.some((i) => i.tone === 'destructive');
 
   // Chatbot (citizen only)
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatMessage, setChatMessage] = useState("");
+  const [chatMessage, setChatMessage] = useState('');
 
   // Pull-to-refresh (mock)
   const [refreshing, setRefreshing] = useState(false);
@@ -163,16 +225,16 @@ export default function Home() {
     setTimeout(() => setRefreshing(false), 800);
   }, []);
 
-  const onSignOut = () => router.replace("/login");
+  const onSignOut = () => router.replace('/login');
 
   useEffect(() => {
     let mounted = true;
-    AsyncStorage.getItem("authToken").then((token) => {
-      fetchProfile(token ?? "", role)
+    AsyncStorage.getItem('authToken').then((token: string | null) => {
+      fetchProfile(token ?? '', role)
         .then((data) => {
           if (mounted) setProfile(data);
         })
-        .catch(() => toast.error("Failed to load profile"))
+        .catch(() => toast.error('Failed to load profile'))
         .finally(() => {
           if (mounted) setProfileLoading(false);
         });
@@ -184,8 +246,8 @@ export default function Home() {
 
   // KPI trends (optional visuals kept, values illustrative)
   const trends = {
-    pendingReports: { dir: "up" as const, pct: 4, tone: "primary" as Tone },
-    ongoingReports: { dir: "up" as const, pct: 11, tone: "ring" as Tone },
+    pendingReports: { dir: 'up' as const, pct: 4, tone: 'primary' as Tone },
+    ongoingReports: { dir: 'up' as const, pct: 11, tone: 'ring' as Tone },
   };
 
   // Entrance animations
@@ -221,46 +283,42 @@ export default function Home() {
   });
 
   // Navigation helpers
-  const goIncidentsIndex = () => router.push({ pathname: "/incidents", params: { role } }); // Citizen: report flow index
+  const goIncidentsIndex = () => router.push({ pathname: '/incidents', params: { role } }); // Citizen: report flow index
   const goManageIncidentsPending = () =>
-    router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } }); // Officer: land on Pending
+    router.push({ pathname: '/incidents/manage-incidents', params: { role, tab: 'pending' } }); // Officer: land on Pending
 
   // Lost & Found routes
-    const goLostFoundCitizen = () =>
-      router.push({ pathname: "/lost-found/citizen", params: { role, tab: "found" } });
+  const goLostFoundCitizen = () =>
+    router.push({ pathname: '/lost-found/citizen', params: { role, tab: 'found' } });
 
-    const goOfficerLostPending = () =>
-      router.push({ pathname: "/lost-found/officer-lost", params: { role, tab: "pending" } });
+  const goOfficerLostPending = () =>
+    router.push({ pathname: '/lost-found/officer-lost', params: { role, tab: 'pending' } });
 
-    const goOfficerFound = () =>
-      router.push({ pathname: "/lost-found/officer-found", params: { role } });
+  const goOfficerFound = () =>
+    router.push({ pathname: '/lost-found/officer-found', params: { role } });
 
   // Safety alerts routes
-    const goCitizenAlerts = () =>
-      router.push({ pathname: "/alerts/citizen", params: { role } });
+  const goCitizenAlerts = () => router.push({ pathname: '/alerts/citizen', params: { role } });
 
-    const goManageAlerts = () =>
-      router.push({ pathname: "/alerts/manage", params: { role } });
+  const goManageAlerts = () => router.push({ pathname: '/alerts/manage', params: { role } });
 
-  const goMyReports = () => router.push({ pathname: "/incidents/my-reports", params: { role } });
+  const goMyReports = () => router.push({ pathname: '/incidents/my-reports', params: { role } });
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.select({ ios: "padding", android: undefined })}
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
-    >
+      behavior={Platform.select({ ios: 'padding', android: undefined })}
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <View className="flex-1">
         <ScrollView
           className="flex-1"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={{
             padding: 20,
-            paddingBottom: role === "citizen" ? 160 : 48,
+            paddingBottom: role === 'citizen' ? 160 : 48,
             flexGrow: 1,
-            backgroundColor: "#FFFFFF",
+            backgroundColor: '#FFFFFF',
           }}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           <View className="flex-1 justify-between gap-6">
             {/* Header + hero */}
             <Animated.View style={animStyle(headerAnim)}>
@@ -270,13 +328,13 @@ export default function Home() {
                     <LayoutDashboard size={26} color="#0F172A" />
                     <Text className="text-2xl font-bold text-foreground">Dashboard</Text>
                   </View>
-                  <View className="rounded-full px-3 py-1 bg-primary/10">
+                  <View className="rounded-full bg-primary/10 px-3 py-1">
                     <Text className="text-xs capitalize text-primary">{role}</Text>
                   </View>
                 </View>
 
                 {showBanner ? (
-                  <View className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 flex-row items-center gap-2">
+                  <View className="mt-3 flex-row items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2">
                     <AlertTriangle size={16} color="#DC2626" />
                     <Text className="text-[13px] text-destructive">
                       Is it an emergency? Call 119 in emergency situations
@@ -284,23 +342,23 @@ export default function Home() {
                   </View>
                 ) : null}
 
-                <View className="bg-primary/5 border border-border rounded-2xl px-4 py-3 mt-3">
+                <View className="mt-3 rounded-2xl border border-border bg-primary/5 px-4 py-3">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1">
                       <Text className="text-base text-foreground">
-                        {greeting},{" "}
+                        {greeting},{' '}
                         {profileLoading ? (
                           <ActivityIndicator size="small" color="#0F172A" />
                         ) : (
-                          <Text className="font-semibold">{profile?.name ?? "User"}</Text>
+                          <Text className="font-semibold">{profile?.name ?? 'User'}</Text>
                         )}
                       </Text>
-                      <View className="flex-row items-center gap-2 mt-0.5">
+                      <View className="mt-0.5 flex-row items-center gap-2">
                         <CalendarDays size={14} color="#0F172A" />
                         <Text className="text-xs text-muted-foreground">{dateStr}</Text>
                       </View>
                     </View>
-                    <View className="w-9 h-9 rounded-full items-center justify-center bg-accent/20">
+                    <View className="h-9 w-9 items-center justify-center rounded-full bg-accent/20">
                       <SunMedium size={18} color="#0F172A" />
                     </View>
                   </View>
@@ -310,14 +368,24 @@ export default function Home() {
 
             {/* Main sections */}
             <View className="gap-6">
-              {role === "officer" ? (
+              {role === 'officer' ? (
                 <>
                   <Animated.View style={animStyle(sectionAnims[0])}>
                     <Card>
                       <CardHeader title="Overview" tone="ring" />
-                      <View className="flex-row gap-3 mt-3">
-                        <Kpi label="Pending reports" value={overview.pendingReports} tone="primary" trend={trends.pendingReports} />
-                        <Kpi label="Ongoing reports" value={overview.ongoingReports} tone="ring" trend={trends.ongoingReports} />
+                      <View className="mt-3 flex-row gap-3">
+                        <Kpi
+                          label="Pending reports"
+                          value={overview.pendingReports}
+                          tone="primary"
+                          trend={trends.pendingReports}
+                        />
+                        <Kpi
+                          label="Ongoing reports"
+                          value={overview.ongoingReports}
+                          tone="ring"
+                          trend={trends.ongoingReports}
+                        />
                       </View>
                     </Card>
                   </Animated.View>
@@ -329,10 +397,31 @@ export default function Home() {
                           0 (left), 1 (right), 2 (left), 3 (right) */}
                       <TileGrid
                         tiles={[
-                          { label: "Manage incidents", icon: Shield, onPress: goManageIncidentsPending, count: counts.incidents }, // left row 1
-                          { label: "Lost items", icon: PackageSearch, onPress: goOfficerLostPending, variant: "secondary", count: counts.lostFound }, // right row 1
-                          { label: "Safety alerts", icon: BellRing, onPress: goManageAlerts, count: counts.alerts }, // left row 2
-                          { label: "Found items", icon: PackageSearch, onPress: goOfficerFound, variant: "secondary" }, // right row 2
+                          {
+                            label: 'Manage incidents',
+                            icon: Shield,
+                            onPress: goManageIncidentsPending,
+                            count: counts.incidents,
+                          }, // left row 1
+                          {
+                            label: 'Lost items',
+                            icon: PackageSearch,
+                            onPress: goOfficerLostPending,
+                            variant: 'secondary',
+                            count: counts.lostFound,
+                          }, // right row 1
+                          {
+                            label: 'Safety alerts',
+                            icon: BellRing,
+                            onPress: goManageAlerts,
+                            count: counts.alerts,
+                          }, // left row 2
+                          {
+                            label: 'Found items',
+                            icon: PackageSearch,
+                            onPress: goOfficerFound,
+                            variant: 'secondary',
+                          }, // right row 2
                         ]}
                       />
                     </Card>
@@ -340,7 +429,12 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[2])}>
                     <Card>
-                      <CardHeader title="Incoming queue" tone="accent" actionLabel="See all" onAction={goManageIncidentsPending} />
+                      <CardHeader
+                        title="Incoming queue"
+                        tone="accent"
+                        actionLabel="See all"
+                        onAction={goManageIncidentsPending}
+                      />
                       <List
                         items={officerQueue}
                         className="mt-2"
@@ -355,7 +449,12 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[3])}>
                     <Card>
-                      <CardHeader title="Manage safety alerts" tone="ring" actionLabel="Manage" onAction={goManageAlerts} />
+                      <CardHeader
+                        title="Manage safety alerts"
+                        tone="ring"
+                        actionLabel="Manage"
+                        onAction={goManageAlerts}
+                      />
                       <List
                         items={safetyAlertsPreviewAll}
                         className="mt-2"
@@ -375,10 +474,27 @@ export default function Home() {
                       <CardHeader title="Quick actions" tone="primary" />
                       <TileGrid
                         tiles={[
-                          { label: "Report incident", icon: ShieldPlus, onPress: goIncidentsIndex },
-                          { label: "Lost & found", icon: PackageSearch, onPress: goLostFoundCitizen, variant: "secondary", count: counts.lostFound },
-                          { label: "My reports", icon: ClipboardList, onPress: goMyReports, count: 1 },
-                          { label: "Safety alerts", icon: BellRing, onPress: goCitizenAlerts, variant: "secondary", count: counts.alerts },
+                          { label: 'Report incident', icon: ShieldPlus, onPress: goIncidentsIndex },
+                          {
+                            label: 'Lost & found',
+                            icon: PackageSearch,
+                            onPress: goLostFoundCitizen,
+                            variant: 'secondary',
+                            count: counts.lostFound,
+                          },
+                          {
+                            label: 'My reports',
+                            icon: ClipboardList,
+                            onPress: goMyReports,
+                            count: 1,
+                          },
+                          {
+                            label: 'Safety alerts',
+                            icon: BellRing,
+                            onPress: goCitizenAlerts,
+                            variant: 'secondary',
+                            count: counts.alerts,
+                          },
                         ]}
                       />
                     </Card>
@@ -386,14 +502,13 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[1])}>
                     <Card>
-                      <CardHeader title="Safety alerts (near you)" tone="destructive" actionLabel="See all" onAction={goCitizenAlerts} />
-                      <FilterChips
-                        options={["All", "Road", "Weather", "Maintenance"]}
-                        active={alertFilter}
-                        onChange={setAlertFilter}
+                      <CardHeader
+                        title="Safety alerts (near you)"
                         tone="destructive"
-                        className="mt-3"
+                        actionLabel="See all"
+                        onAction={goCitizenAlerts}
                       />
+                      {/* Categories removed from preview for a cleaner list */}
                       <List
                         items={citizenAlerts}
                         className="mt-2"
@@ -407,7 +522,12 @@ export default function Home() {
 
                   <Animated.View style={animStyle(sectionAnims[2])}>
                     <Card>
-                      <CardHeader title="Recent activity" tone="ring" actionLabel="View all" onAction={() => {}} />
+                      <CardHeader
+                        title="Recent activity"
+                        tone="ring"
+                        actionLabel="View all"
+                        onAction={() => {}}
+                      />
                       <Timeline
                         items={citizenRecent}
                         className="mt-3"
@@ -430,7 +550,7 @@ export default function Home() {
           </View>
         </ScrollView>
 
-        {role === "citizen" ? (
+        {role === 'citizen' ? (
           <ChatbotWidget
             open={chatOpen}
             onToggle={() => setChatOpen((v) => !v)}
@@ -447,17 +567,17 @@ export default function Home() {
  * Return a local greeting for the given hour.
  * @param hour - 0–23 hour in local time.
  */
-function getGreeting(hour: number): "Good morning" | "Good afternoon" | "Good evening" {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+function getGreeting(hour: number): 'Good morning' | 'Good afternoon' | 'Good evening' {
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 /* -------------------- UI Partials -------------------- */
 
 /** Card container with standard padding, border, and rounded corners. */
 const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <View className="bg-muted rounded-2xl border border-border p-5">{children}</View>
+  <View className="rounded-2xl border border-border bg-muted p-5">{children}</View>
 );
 
 /**
@@ -468,26 +588,40 @@ const CardHeader: React.FC<{
   actionLabel?: string;
   onAction?: () => void;
   tone?: Tone;
-}> = ({ title, actionLabel, onAction, tone = "foreground" }) => (
+}> = ({ title, actionLabel, onAction, tone = 'foreground' }) => (
   <View>
     <View className="flex-row items-center justify-between">
       <Text className="text-lg font-semibold text-foreground">{title}</Text>
       {actionLabel ? (
-        <Pressable onPress={onAction} className="flex-row items-center gap-1" android_ripple={{ color: "rgba(0,0,0,0.06)" }}>
+        <Pressable
+          onPress={onAction}
+          className="flex-row items-center gap-1"
+          android_ripple={{ color: 'rgba(0,0,0,0.06)' }}>
           <Text className="text-primary">{actionLabel}</Text>
           <ChevronRight size={14} color="#2563EB" />
         </Pressable>
       ) : null}
     </View>
-    <View className={`h-1 rounded-full mt-2 w-16 ${TONE_BG[tone]}`} />
+    <View className={`mt-2 h-1 w-16 rounded-full ${TONE_BG[tone]}`} />
   </View>
 );
 
 /** Compact trend chip (up/down + %). */
-const TrendChip: React.FC<{ dir: "up" | "down"; pct: number; tone: Tone }> = ({ dir, pct, tone }) => (
-  <View className={`flex-row items-center gap-1 px-2 py-0.5 rounded-full ${TONE_BG_FAINT[tone]}`}>
-    {dir === "up" ? <TrendingUp size={12} color="#0F172A" /> : <TrendingDown size={12} color="#0F172A" />}
-    <Text className={`text-[11px] ${TONE_TEXT[tone]}`}>{dir === "up" ? "+" : "-"}{pct}%</Text>
+const TrendChip: React.FC<{ dir: 'up' | 'down'; pct: number; tone: Tone }> = ({
+  dir,
+  pct,
+  tone,
+}) => (
+  <View className={`flex-row items-center gap-1 rounded-full px-2 py-0.5 ${TONE_BG_FAINT[tone]}`}>
+    {dir === 'up' ? (
+      <TrendingUp size={12} color="#0F172A" />
+    ) : (
+      <TrendingDown size={12} color="#0F172A" />
+    )}
+    <Text className={`text-[11px] ${TONE_TEXT[tone]}`}>
+      {dir === 'up' ? '+' : '-'}
+      {pct}%
+    </Text>
   </View>
 );
 
@@ -496,21 +630,24 @@ const Kpi: React.FC<{
   label: string;
   value: number | string;
   tone?: Tone;
-  trend?: { dir: "up" | "down"; pct: number; tone: Tone; progress?: number };
-}> = ({ label, value, tone = "foreground", trend }) => (
-  <View className="flex-1 bg-background rounded-xl border border-border p-4 overflow-hidden">
-    <View className={`h-1.5 rounded-full mb-2 ${TONE_BG[tone]}`} />
+  trend?: { dir: 'up' | 'down'; pct: number; tone: Tone; progress?: number };
+}> = ({ label, value, tone = 'foreground', trend }) => (
+  <View className="flex-1 overflow-hidden rounded-xl border border-border bg-background p-4">
+    <View className={`mb-2 h-1.5 rounded-full ${TONE_BG[tone]}`} />
     <View className="flex-row items-end justify-between">
       <Text className="text-3xl font-bold text-foreground">{String(value)}</Text>
       {trend ? <TrendChip dir={trend.dir} pct={trend.pct} tone={trend.tone} /> : null}
     </View>
-    <Text className="text-xs text-muted-foreground mt-0.5">{label}</Text>
+    <Text className="mt-0.5 text-xs text-muted-foreground">{label}</Text>
     {trend?.progress != null ? (
       <View className="mt-2">
-        <View className="h-2 rounded-full bg-primary/10 overflow-hidden">
-          <View style={{ width: `${Math.max(0, Math.min(100, trend.progress))}%` }} className="h-2 rounded-full bg-primary" />
+        <View className="h-2 overflow-hidden rounded-full bg-primary/10">
+          <View
+            style={{ width: `${Math.max(0, Math.min(100, trend.progress))}%` }}
+            className="h-2 rounded-full bg-primary"
+          />
         </View>
-        <Text className="text-[11px] text-muted-foreground mt-1">{trend.progress}% complete</Text>
+        <Text className="mt-1 text-[11px] text-muted-foreground">{trend.progress}% complete</Text>
       </View>
     ) : null}
   </View>
@@ -520,15 +657,15 @@ type Tile = {
   label: string;
   icon: IconType;
   onPress?: () => void;
-  variant?: "default" | "secondary";
+  variant?: 'default' | 'secondary';
   count?: number;
 };
 
 /** Responsive 2-column grid of action tiles. */
 const TileGrid: React.FC<{ tiles: Tile[] }> = ({ tiles }) => (
-  <View className="flex-row flex-wrap -mx-1 mt-3">
+  <View className="-mx-1 mt-3 flex-row flex-wrap">
     {tiles.map((t, i) => (
-      <View key={i} className="basis-1/2 px-1 mb-2">
+      <View key={i} className="mb-2 basis-1/2 px-1">
         <IconTileButton {...t} />
       </View>
     ))}
@@ -536,18 +673,23 @@ const TileGrid: React.FC<{ tiles: Tile[] }> = ({ tiles }) => (
 );
 
 /** Action tile button with optional count badge. */
-const IconTileButton: React.FC<Tile> = ({ label, icon: IconCmp, onPress, variant = "default", count }) => {
-  const isSecondary = variant === "secondary";
-  const iconColor = isSecondary ? "#0F172A" : "#FFFFFF";
+const IconTileButton: React.FC<Tile> = ({
+  label,
+  icon: IconCmp,
+  onPress,
+  variant = 'default',
+  count,
+}) => {
+  const isSecondary = variant === 'secondary';
+  const iconColor = isSecondary ? '#0F172A' : '#FFFFFF';
 
   return (
     <Button
       onPress={onPress}
-      variant={isSecondary ? "secondary" : "default"}
-      className="h-28 rounded-2xl items-center justify-center px-3 relative active:opacity-90 active:scale-95"
-    >
-      {typeof count === "number" && count > 0 ? (
-        <View className="absolute top-2 right-2 bg-primary rounded-full px-2 py-0.5">
+      variant={isSecondary ? 'secondary' : 'default'}
+      className="relative h-28 items-center justify-center rounded-2xl px-3 active:scale-95 active:opacity-90">
+      {typeof count === 'number' && count > 0 ? (
+        <View className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5">
           <Text className="text-[11px] text-primary-foreground">{count}</Text>
         </View>
       ) : null}
@@ -555,8 +697,10 @@ const IconTileButton: React.FC<Tile> = ({ label, icon: IconCmp, onPress, variant
         <IconCmp size={30} color={iconColor} />
         <Text
           numberOfLines={2}
-          className={(isSecondary ? "text-foreground " : "text-primary-foreground ") + "text-center leading-tight text-[14px]"}
-        >
+          className={
+            (isSecondary ? 'text-foreground ' : 'text-primary-foreground ') +
+            'text-center text-[14px] leading-tight'
+          }>
           {label}
         </Text>
       </View>
@@ -579,13 +723,15 @@ const EmptyState: React.FC<{
   subtitle?: string;
   icon?: IconType;
   tone?: Tone;
-}> = ({ title, subtitle, icon: IconCmp = Inbox, tone = "ring" }) => (
+}> = ({ title, subtitle, icon: IconCmp = Inbox, tone = 'ring' }) => (
   <View className="items-center justify-center py-8">
-    <View className={`w-14 h-14 rounded-full items-center justify-center ${TONE_BG_FAINT[tone]}`}>
+    <View className={`h-14 w-14 items-center justify-center rounded-full ${TONE_BG_FAINT[tone]}`}>
       <IconCmp size={28} color="#0F172A" />
     </View>
-    <Text className="mt-3 text-foreground font-semibold">{title}</Text>
-    {subtitle ? <Text className="text-xs text-muted-foreground mt-1 text-center">{subtitle}</Text> : null}
+    <Text className="mt-3 font-semibold text-foreground">{title}</Text>
+    {subtitle ? (
+      <Text className="mt-1 text-center text-xs text-muted-foreground">{subtitle}</Text>
+    ) : null}
   </View>
 );
 
@@ -598,33 +744,47 @@ const List: React.FC<{
   emptyIcon?: IconType;
   emptyTone?: Tone;
   onItemPress?: (item: ListItem) => void;
-}> = ({ items, className, emptyTitle = "Nothing yet.", emptySubtitle, emptyIcon, emptyTone = "ring", onItemPress }) => {
+}> = ({
+  items,
+  className,
+  emptyTitle = 'Nothing yet.',
+  emptySubtitle,
+  emptyIcon,
+  emptyTone = 'ring',
+  onItemPress,
+}) => {
   if (!items || items.length === 0) {
     return (
-      <View className={`bg-background rounded-xl border border-border mt-3 ${className ?? ""}`}>
+      <View className={`mt-3 rounded-xl border border-border bg-background ${className ?? ''}`}>
         <EmptyState title={emptyTitle} subtitle={emptySubtitle} icon={emptyIcon} tone={emptyTone} />
       </View>
     );
   }
   return (
-    <View className={`mt-3 ${className ?? ""}`}>
+    <View className={`mt-3 ${className ?? ''}`}>
       {items.map((it) => {
         const Row = (
-          <View className="flex-row items-center justify-between bg-background rounded-xl border border-border px-3 py-3 mb-2">
-            <View className="flex-row items-center gap-3 flex-1">
-              <View className={`w-8 h-8 rounded-full items-center justify-center ${TONE_BG_FAINT[it.tone]}`}>
+          <View className="mb-2 flex-row items-center justify-between rounded-xl border border-border bg-background px-3 py-3">
+            <View className="flex-1 flex-row items-center gap-3">
+              <View
+                className={`h-8 w-8 items-center justify-center rounded-full ${TONE_BG_FAINT[it.tone]}`}>
                 <it.icon size={18} color="#0F172A" />
               </View>
               <View className="flex-1">
                 <Text className="text-foreground">{it.title}</Text>
-                {it.meta ? <Text className={`text-xs mt-0.5 ${TONE_TEXT[it.tone]}`}>{it.meta}</Text> : null}
+                {it.meta ? (
+                  <Text className={`mt-0.5 text-xs ${TONE_TEXT[it.tone]}`}>{it.meta}</Text>
+                ) : null}
               </View>
             </View>
             <ChevronRight size={16} color="#94A3B8" />
           </View>
         );
         return onItemPress ? (
-          <Pressable key={it.id} onPress={() => onItemPress(it)} android_ripple={{ color: "rgba(0,0,0,0.06)" }}>
+          <Pressable
+            key={it.id}
+            onPress={() => onItemPress(it)}
+            android_ripple={{ color: 'rgba(0,0,0,0.06)' }}>
             {Row}
           </Pressable>
         ) : (
@@ -635,33 +795,6 @@ const List: React.FC<{
   );
 };
 
-/** Filter chip row (used for citizen alerts only). */
-const FilterChips: React.FC<{
-  options: string[];
-  active: string;
-  onChange: (v: any) => void;
-  tone?: Tone;
-  className?: string;
-}> = ({ options, active, onChange, tone = "primary", className }) => (
-  <View className={`flex-row flex-wrap gap-2 ${className ?? ""}`}>
-    {options.map((opt) => {
-      const isActive = opt === active;
-      return (
-        <Pressable
-          key={opt}
-          onPress={() => onChange(opt as any)}
-          className={`px-3 py-1 rounded-full border ${
-            isActive ? `${TONE_BG_FAINT[tone]} border-transparent` : "bg-background border-border"
-          }`}
-          android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-        >
-          <Text className={`text-xs ${isActive ? TONE_TEXT[tone] : "text-muted-foreground"}`}>{opt}</Text>
-        </Pressable>
-      );
-    })}
-  </View>
-);
-
 /** Vertical timeline with bullets and a guiding line; includes empty state. */
 const Timeline: React.FC<{
   items: ListItem[];
@@ -670,28 +803,37 @@ const Timeline: React.FC<{
   emptySubtitle?: string;
   emptyIcon?: IconType;
   emptyTone?: Tone;
-}> = ({ items, className, emptyTitle = "No recent activity", emptySubtitle, emptyIcon, emptyTone = "ring" }) => {
+}> = ({
+  items,
+  className,
+  emptyTitle = 'No recent activity',
+  emptySubtitle,
+  emptyIcon,
+  emptyTone = 'ring',
+}) => {
   if (!items || items.length === 0) {
     return (
-      <View className={`bg-background rounded-2xl border border-border mt-3 ${className ?? ""}`}>
+      <View className={`mt-3 rounded-2xl border border-border bg-background ${className ?? ''}`}>
         <EmptyState title={emptyTitle} subtitle={emptySubtitle} icon={emptyIcon} tone={emptyTone} />
       </View>
     );
   }
 
   return (
-    <View className={`mt-3 ${className ?? ""}`}>
+    <View className={`mt-3 ${className ?? ''}`}>
       <View className="relative pl-6">
-        <View className="absolute left-3 top-0 bottom-0 w-0.5 bg-ring/30" />
+        <View className="absolute bottom-0 left-3 top-0 w-0.5 bg-ring/30" />
         {items.map((it) => (
           <View key={it.id} className="mb-4">
-            <View className={`absolute left-2.5 top-1 w-3 h-3 rounded-full ${TONE_BG[it.tone]}`} />
-            <View className="bg-background rounded-xl border border-border px-3 py-2">
+            <View className={`absolute left-2.5 top-1 h-3 w-3 rounded-full ${TONE_BG[it.tone]}`} />
+            <View className="rounded-xl border border-border bg-background px-3 py-2">
               <View className="flex-row items-center gap-2">
                 <it.icon size={16} color="#0F172A" />
                 <Text className="text-foreground">{it.title}</Text>
               </View>
-              {it.meta ? <Text className={`text-xs mt-0.5 ${TONE_TEXT[it.tone]}`}>{it.meta}</Text> : null}
+              {it.meta ? (
+                <Text className={`mt-0.5 text-xs ${TONE_TEXT[it.tone]}`}>{it.meta}</Text>
+              ) : null}
             </View>
           </View>
         ))}
@@ -709,8 +851,11 @@ const ChatbotWidget: React.FC<{
 }> = ({ open, onToggle, message, setMessage }) => {
   if (!open) {
     return (
-      <View className="absolute right-4 bottom-6">
-        <Button onPress={onToggle} size="lg" className="rounded-full h-14 w-14 p-0 items-center justify-center">
+      <View className="absolute bottom-6 right-4">
+        <Button
+          onPress={onToggle}
+          size="lg"
+          className="h-14 w-14 items-center justify-center rounded-full p-0">
           <MessageSquare size={24} color="#FFFFFF" />
         </Button>
       </View>
@@ -718,9 +863,9 @@ const ChatbotWidget: React.FC<{
   }
 
   return (
-    <View className="absolute right-4 bottom-6 w-11/12 max-w-[360px]">
-      <View className="bg-background rounded-2xl border border-border shadow-lg overflow-hidden">
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+    <View className="absolute bottom-6 right-4 w-11/12 max-w-[360px]">
+      <View className="overflow-hidden rounded-2xl border border-border bg-background shadow-lg">
+        <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
           <View className="flex-row items-center gap-2">
             <MessageSquare size={22} color="#0F172A" />
             <Text className="font-semibold text-foreground">Chatbot</Text>
@@ -731,21 +876,20 @@ const ChatbotWidget: React.FC<{
             onPress={onToggle}
             accessibilityRole="button"
             accessibilityLabel="Close chat"
-            className="w-9 h-9 items-center justify-center rounded-full bg-muted"
-            android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: true }}
-          >
+            className="h-9 w-9 items-center justify-center rounded-full bg-muted"
+            android_ripple={{ color: 'rgba(0,0,0,0.06)', borderless: true }}>
             <X size={18} color="#0F172A" />
           </Pressable>
         </View>
 
         <View className="p-4">
-          <View className="bg-muted rounded-xl border border-border p-3">
+          <View className="rounded-xl border border-border bg-muted p-3">
             <Text className="text-sm text-muted-foreground">
               Hi! I can help with incidents, lost &amp; found, and safety alerts. Ask me anything.
             </Text>
           </View>
 
-        <View className="flex-row items-center gap-2 mt-3">
+          <View className="mt-3 flex-row items-center gap-2">
             <Label nativeID="chatInput" className="hidden">
               <Text>Message</Text>
             </Label>
@@ -754,11 +898,11 @@ const ChatbotWidget: React.FC<{
               value={message}
               onChangeText={setMessage}
               placeholder="Type your message…"
-              className="flex-1 bg-background h-12 rounded-xl"
+              className="h-12 flex-1 rounded-xl bg-background"
               returnKeyType="send"
-              onSubmitEditing={() => setMessage("")}
+              onSubmitEditing={() => setMessage('')}
             />
-            <Button onPress={() => setMessage("")} className="h-12 px-4 rounded-xl">
+            <Button onPress={() => setMessage('')} className="h-12 rounded-xl px-4">
               <Text className="text-primary-foreground">Send</Text>
             </Button>
           </View>
@@ -766,4 +910,4 @@ const ChatbotWidget: React.FC<{
       </View>
     </View>
   );
-}
+};
