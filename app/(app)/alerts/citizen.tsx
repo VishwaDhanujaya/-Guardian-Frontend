@@ -1,12 +1,13 @@
 // app/(app)/alerts/citizen.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Animated, Keyboard, Pressable, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 import {
     AlertTriangle,
@@ -33,16 +34,11 @@ export default function CitizenAlerts() {
   const resolvedRole: Role = role === "officer" ? "officer" : "citizen";
 
   // Entrance animation
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],

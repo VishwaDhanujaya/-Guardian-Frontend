@@ -8,6 +8,11 @@ It was initialized using the following command:
 npx react-native-reusables/cli@latest init -t .
 ```
 
+## Recent Updates
+
+- Refined the color palette for improved contrast while retaining existing tokens.
+- Simplified the citizen safety alerts preview by removing category filters.
+
 ## Getting Started
 
 To run the development server:
@@ -29,6 +34,17 @@ This will start the Expo Dev Server. Open the app in:
 - **Web**: press `w` to run in a browser
 
 You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
+
+### Backend API
+
+This frontend expects a backend API base URL provided via the `EXPO_PUBLIC_API_URL` environment variable. When running on a physical device or simulator, set this to the host machine's IP address, for example:
+
+```bash
+export EXPO_PUBLIC_API_URL="http://192.168.1.100:3000"
+npm run dev
+```
+
+If the variable is not set, network requests will fail.
 
 ## Adding components
 

@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Animated,
     Keyboard,
@@ -14,6 +14,7 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 import {
     AlertTriangle,
@@ -67,16 +68,11 @@ export default function OfficerLost() {
   }, [navigation, resolvedRole]);
 
   // Entrance animation
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
@@ -97,8 +93,7 @@ export default function OfficerLost() {
     if (isTabKey(tabParam)) setActiveTab(tabParam);
   }, [tabParam]);
 
-  // Priority filter
-  const [priorityFilter, setPriorityFilter] = useState<"All" | Priority>("All");
+  // Priority weighting for sorting
   const priorityWeight: Record<Priority, number> = { Urgent: 3, Normal: 2, Low: 1 };
   const statusWeight: Record<StatusLost, number> = {
     "In Review": 5,
@@ -135,15 +130,13 @@ export default function OfficerLost() {
       activeTab === "searching" ? tabBuckets.searching :
                                   tabBuckets.returned;
 
-    const filtered = base.filter(r => priorityFilter === "All" ? true : r.suggestedPriority === priorityFilter);
-
-    return [...filtered].sort((a, b) => {
+    return [...base].sort((a, b) => {
       const sw = statusWeight[b.status] - statusWeight[a.status];
       if (sw !== 0) return sw;
       const pw = priorityWeight[b.suggestedPriority] - priorityWeight[a.suggestedPriority];
       return pw;
     });
-  }, [activeTab, tabBuckets, priorityFilter]);
+  }, [activeTab, tabBuckets]);
 
   // Priority pill
   const prioPill = (p: Priority) =>
@@ -159,18 +152,6 @@ export default function OfficerLost() {
       : s === "Returned" ? "text-muted-foreground"
       : s === "In Review" ? "text-primary"
       : "text-foreground";
-
-  // Small filter chip
-  const Chip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
-    <Pressable
-      onPress={onPress}
-      className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
-      android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-      hitSlop={8}
-    >
-      <Text className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{label}</Text>
-    </Pressable>
-  );
 
   // Toggle panels + actions
   const toggleUpdatePanel = (id: string) =>
@@ -301,16 +282,6 @@ export default function OfficerLost() {
               <TabButton tab="returned"  label="Returned"  count={counts.returned}  Icon={CheckCircle} />
             </View>
 
-            {/* Filters */}
-            <View className="mt-4">
-              <Text className="text-xs text-foreground mb-1">Priority filter</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {(["All", "Urgent", "Normal", "Low"] as const).map((p) => (
-                  <Chip key={p} label={p} active={priorityFilter === p} onPress={() => setPriorityFilter(p)} />
-                ))}
-              </View>
-            </View>
-
             {/* List */}
             <View className="mt-4">
               {visibleRows.length === 0 ? (
@@ -320,7 +291,7 @@ export default function OfficerLost() {
                   </View>
                   <Text className="mt-3 font-semibold text-foreground">Nothing here</Text>
                   <Text className="text-xs text-muted-foreground mt-1 text-center">
-                    Try a different tab or adjust the priority filter.
+                    Try a different tab.
                   </Text>
                 </View>
               ) : (
@@ -333,58 +304,64 @@ export default function OfficerLost() {
                       key={r.id}
                       className="bg-background rounded-xl border border-border px-3 py-3 mb-3"
                     >
-                      {/* Header: responsive to avoid overlap */}
-                      {isCompact ? (
-                        <View className="gap-2">
-                          <View className="pr-1 min-w-0">
-                            <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
-                              {r.title}
-                            </Text>
+                      <Pressable
+                        onPress={() =>
+                          router.push({ pathname: "/lost-found/view", params: { id: r.id, type: "lost", role: "officer" } })
+                        }
+                      >
+                        {/* Header: responsive to avoid overlap */}
+                        {isCompact ? (
+                          <View className="gap-2">
+                            <View className="pr-1 min-w-0">
+                              <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
+                                {r.title}
+                              </Text>
 
-                            <View className="flex-row flex-wrap items-center gap-2 mt-1">
-                              <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
-                              {r.status === "In Review" ? (
-                                <View className="flex-row items-center">
-                                  <Text className="text-xs text-primary"> · Read more</Text>
-                                  <ChevronRight size={12} color="#2563EB" />
-                                </View>
-                              ) : null}
-                              <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
-                              <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                              <View className="flex-row flex-wrap items-center gap-2 mt-1">
+                                <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                                {r.status === "In Review" ? (
+                                  <View className="flex-row items-center">
+                                    <Text className="text-xs text-primary"> · Read more</Text>
+                                    <ChevronRight size={12} color="#2563EB" />
+                                  </View>
+                                ) : null}
+                                <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
+                                <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                              </View>
+                            </View>
+
+                            <View className={`self-start px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
+                              <PillIcon size={12} color="#0F172A" />
+                              <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
                             </View>
                           </View>
+                        ) : (
+                          <View className="flex-row flex-wrap items-start justify-between gap-3 gap-y-2">
+                            <View className="flex-1 pr-1 min-w-0">
+                              <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
+                                {r.title}
+                              </Text>
 
-                          <View className={`self-start px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap}`}>
-                            <PillIcon size={12} color="#0F172A" />
-                            <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <View className="flex-row flex-wrap items-start justify-between gap-3 gap-y-2">
-                          <View className="flex-1 pr-1 min-w-0">
-                            <Text className="text-foreground shrink" numberOfLines={2} ellipsizeMode="tail">
-                              {r.title}
-                            </Text>
+                              <View className="flex-row flex-wrap items-center gap-2 mt-1">
+                                <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
+                                {r.status === "In Review" ? (
+                                  <View className="flex-row items-center" >
+                                    <Text className="text-xs text-primary"> · Read more</Text>
+                                    <ChevronRight size={12} color="#2563EB" />
+                                  </View>
+                                ) : null}
+                                <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
+                                <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                              </View>
+                            </View>
 
-                            <View className="flex-row flex-wrap items-center gap-2 mt-1">
-                              <Text className={`text-xs ${statusTone(r.status)}`}>{r.status}</Text>
-                              {r.status === "In Review" ? (
-                                <View className="flex-row items-center" >
-                                  <Text className="text-xs text-primary"> · Read more</Text>
-                                  <ChevronRight size={12} color="#2563EB" />
-                                </View>
-                              ) : null}
-                              <Text className="text-xs text-muted-foreground">• {r.reportedAgo}</Text>
-                              <Text className="text-xs text-muted-foreground">• By {r.citizen}</Text>
+                            <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap} self-start max-w-[60%]`}>
+                              <PillIcon size={12} color="#0F172A" />
+                              <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
                             </View>
                           </View>
-
-                          <View className={`px-2 py-0.5 rounded-full border flex-row items-center gap-1 ${pill.wrap} self-start max-w-[60%]`}>
-                            <PillIcon size={12} color="#0F172A" />
-                            <Text className={`text-[11px] font-medium ${pill.text}`}>Priority: {r.suggestedPriority}</Text>
-                          </View>
-                        </View>
-                      )}
+                        )}
+                      </Pressable>
 
                       {/* Actions by tab */}
                       <View className="flex-row flex-wrap items-center gap-2 mt-3">
