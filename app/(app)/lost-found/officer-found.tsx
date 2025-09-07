@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { Animated, Pressable, ScrollView, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -8,6 +8,7 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 import {
     ChevronLeft,
@@ -38,10 +39,7 @@ export default function OfficerFound() {
     else router.replace("/home?role=officer");
   };
 
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, { toValue: 1, useNativeDriver: true }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation();
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
@@ -139,10 +137,10 @@ export default function OfficerFound() {
                   <Input placeholder="Item name*" value={name} onChangeText={setName} />
                   <Input placeholder="Description" value={desc} onChangeText={setDesc} />
                   <Input placeholder="Model" value={model} onChangeText={setModel} />
-                  <Input placeholder="Serial (optional)" value={serial} onChangeText={setSerial} />
-                  <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
+                  <Input placeholder="Serial/IMEI (optional)" value={serial} onChangeText={setSerial} />
                   <Input placeholder="Colour" value={color} onChangeText={setColor} />
                   <Input placeholder="Police branch" value={branch} onChangeText={setBranch} />
+                  <Input placeholder="Last location*" value={lastLoc} onChangeText={setLastLoc} />
                 </View>
 
                 <View className="flex-row items-center justify-end gap-2 mt-3">

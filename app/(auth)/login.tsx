@@ -2,6 +2,7 @@
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Image,
@@ -23,16 +24,17 @@ import {
   EyeOff,
   IdCard,
   Lock,
-  Mail,
   Shield,
   UserRound,
 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { loginUser } from "@/lib/api";
 
 type Role = "citizen" | "officer";
 
 /**
  * Login screen for Guardian.
- * - Roles: Citizen (email) and Officer (numeric ID).
+ * - Roles: Citizen (username) and Officer (numeric ID).
  * - Animated role switcher and form transitions.
  * - Basic validation + navigation stubs.
  */
@@ -41,6 +43,7 @@ export default function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isOfficer = tab === "officer";
   const canContinue = identifier.trim().length > 0 && password.length >= 6;
@@ -92,53 +95,34 @@ export default function Login() {
    * - Citizen: collapse internal whitespace and trim.
    */
   const sanitizeIdentifier = (value: string): string => {
-    return isOfficer ? value.replace(/\D+/g, "") : value.trim().replace(/\s+/g, " ");
+    return isOfficer ? value.replace(/\D+/g, "") : value.replace(/\s+/g, "");
   };
 
   /**
-   * Build a friendly display name for greeting toasts.
-   * - Citizen: derive from email local-part ("alex.johnson" → "Alex Johnson").
-   * - Officer: mask all but last 3 digits of ID.
+   * Handle sign-in flow via mock backend.
    */
-  const deriveDisplayName = (raw: string, officer: boolean): string => {
-    if (officer) {
-      const id = raw.trim();
-      if (!id) return "Officer";
-      const masked = id.replace(/\d(?=\d{3})/g, "•");
-      return `Officer ${masked}`;
-    }
-    const email = raw.trim();
-    const local = email.split("@")[0] ?? "";
-    if (!local) return "there";
-    const words = local.replace(/[_.-]+/g, " ").split(" ").filter(Boolean);
-    const proper = words
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ");
-    return proper || "there";
-  };
-
-  /**
-   * Handle sign-in flow.
-   * - Applies sanitization.
-   * - Greets user contextually by role.
-   * - Navigates to MFA for officers or home for citizens.
-   */
-  const onSignIn = (): void => {
+  const onSignIn = async (): Promise<void> => {
+    if (loading) return;
     const safeId = sanitizeIdentifier(identifier);
     if (safeId !== identifier) setIdentifier(safeId);
-
-    const displayName = deriveDisplayName(safeId, isOfficer);
-
-    if (isOfficer) {
-      toast.success(`Welcome back, ${displayName}!`);
-      router.replace({ pathname: "/mfa", params: { role: "officer" } });
-    } else {
-      toast.success(`Welcome back, ${displayName}!`);
-      router.replace({ pathname: "/home", params: { role: "citizen" } });
+    try {
+      setLoading(true);
+      const res = await loginUser(safeId, password, isOfficer ? "officer" : "citizen");
+      await AsyncStorage.setItem("authToken", res.token);
+      toast.success(`Welcome back, ${res.user.name}!`);
+      if (res.requiresMfa) {
+        router.replace({ pathname: "/mfa", params: { role: "officer" } });
+      } else {
+        router.replace({ pathname: "/home", params: { role: res.user.role } });
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Sign in failed");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const IdentifierIcon = isOfficer ? IdCard : Mail;
+  const IdentifierIcon = isOfficer ? IdCard : UserRound;
 
   return (
     <KeyboardAwareScrollView
@@ -216,7 +200,7 @@ export default function Login() {
                   }}
                   className="text-xs text-foreground"
                 >
-                  {isOfficer ? "Officer ID" : "Email"}
+                  {isOfficer ? "Officer ID" : "Username"}
                 </Animated.Text>
               </Label>
 
@@ -226,16 +210,16 @@ export default function Login() {
                   aria-labelledby="identifierLabel"
                   value={identifier}
                   onChangeText={(text) => {
-                    setIdentifier(isOfficer ? text.replace(/\D+/g, "") : text.replace(/\s+/g, " "));
+                    setIdentifier(isOfficer ? text.replace(/\D+/g, "") : text.replace(/\s+/g, ""));
                   }}
                   onBlur={() => setIdentifier((prev) => sanitizeIdentifier(prev))}
                   autoCapitalize="none"
-                  autoComplete={isOfficer ? "off" : "email"}
-                  keyboardType={isOfficer ? "number-pad" : "email-address"}
+                  autoComplete={isOfficer ? "off" : "username"}
+                  keyboardType={isOfficer ? "number-pad" : "default"}
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onSubmitEditing={() => passwordRef.current?.focus()}
-                  placeholder={isOfficer ? "000000" : "m@example.com"}
+                  placeholder={isOfficer ? "000000" : "username"}
                   className="bg-background h-12 rounded-xl pl-9"
                 />
               </View>
@@ -292,9 +276,13 @@ export default function Login() {
               size="lg"
               variant="default"
               className="mt-1 h-12 rounded-xl active:opacity-90 active:scale-95"
-              disabled={!canContinue}
+              disabled={!canContinue || loading}
             >
-              <Text className="font-semibold text-primary-foreground">Sign in</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="font-semibold text-primary-foreground">Sign in</Text>
+              )}
             </Button>
           </Animated.View>
 

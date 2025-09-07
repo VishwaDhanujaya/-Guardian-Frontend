@@ -2,6 +2,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { toast } from "@/components/toast";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { fetchProfile } from "@/lib/api";
 
 import {
   AlertTriangle,
@@ -73,6 +77,9 @@ const TONE_BG_FAINT: Record<Tone, string> = {
 export default function Home() {
   const params = useLocalSearchParams<{ role?: string }>();
   const role: Role = params.role === "officer" ? "officer" : "citizen";
+
+  const [profile, setProfile] = useState<{ name: string } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // Greeting + date (local)
   const now = new Date();
@@ -157,6 +164,23 @@ export default function Home() {
 
   const onSignOut = () => router.replace("/login");
 
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem("authToken").then((token) => {
+      fetchProfile(token ?? "", role)
+        .then((data) => {
+          if (mounted) setProfile(data);
+        })
+        .catch(() => toast.error("Failed to load profile"))
+        .finally(() => {
+          if (mounted) setProfileLoading(false);
+        });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [role]);
+
   // KPI trends (optional visuals kept, values illustrative)
   const trends = {
     pendingReports: { dir: "up" as const, pct: 4, tone: "primary" as Tone },
@@ -201,23 +225,23 @@ export default function Home() {
     router.push({ pathname: "/incidents/manage-incidents", params: { role, tab: "pending" } }); // Officer: land on Pending
 
   // Lost & Found routes
-  const goLostFoundCitizen = () =>
-    router.push({ pathname: "/(app)/lost-found/citizen", params: { role, tab: "found" } });
+    const goLostFoundCitizen = () =>
+      router.push({ pathname: "/lost-found/citizen", params: { role, tab: "found" } });
 
-  const goOfficerLostPending = () =>
-    router.push({ pathname: "/(app)/lost-found/officer-lost", params: { role, tab: "pending" } });
+    const goOfficerLostPending = () =>
+      router.push({ pathname: "/lost-found/officer-lost", params: { role, tab: "pending" } });
 
-  const goOfficerFound = () =>
-    router.push({ pathname: "/(app)/lost-found/officer-found", params: { role } });
+    const goOfficerFound = () =>
+      router.push({ pathname: "/lost-found/officer-found", params: { role } });
 
   // Safety alerts routes
-  const goCitizenAlerts = () =>
-    router.push({ pathname: "/(app)/alerts/citizen", params: { role } });
+    const goCitizenAlerts = () =>
+      router.push({ pathname: "/alerts/citizen", params: { role } });
 
-  const goManageAlerts = () =>
-    router.push({ pathname: "/(app)/alerts/manage", params: { role } });
+    const goManageAlerts = () =>
+      router.push({ pathname: "/alerts/manage", params: { role } });
 
-  const goMyReports = () => router.push({ pathname: "/(app)/incidents/my-reports", params: { role } });
+  const goMyReports = () => router.push({ pathname: "/incidents/my-reports", params: { role } });
 
   return (
     <KeyboardAvoidingView
@@ -263,7 +287,12 @@ export default function Home() {
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1">
                       <Text className="text-base text-foreground">
-                        {greeting}, <Text className="font-semibold">Alex</Text>
+                        {greeting},{" "}
+                        {profileLoading ? (
+                          <ActivityIndicator size="small" color="#0F172A" />
+                        ) : (
+                          <Text className="font-semibold">{profile?.name ?? "User"}</Text>
+                        )}
                       </Text>
                       <View className="flex-row items-center gap-2 mt-0.5">
                         <CalendarDays size={14} color="#0F172A" />
