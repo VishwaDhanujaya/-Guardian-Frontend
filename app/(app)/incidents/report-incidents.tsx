@@ -1,7 +1,7 @@
 // app/(app)/incidents/report-incidents.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import type { NativeSyntheticEvent, TextInput as RNTextInput, TextInputContentSizeChangeEventData } from "react-native";
 import {
   Animated,
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 import {
   AlertTriangle,
@@ -56,16 +57,11 @@ export default function ReportIncidents() {
   }, [navigation, resolvedRole]);
 
   // Entrance motion
-  const mount = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(mount, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [mount]);
+  const { value: mount } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
@@ -230,24 +226,6 @@ export default function ReportIncidents() {
               </View>
             </View>
 
-            {/* Location */}
-            <View className="gap-1">
-              <Label nativeID="locLabel" className="text-xs">
-                <Text className="text-xs text-foreground">Location</Text>
-              </Label>
-              <View className="relative">
-                <MapPin size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 14 }} />
-                <Input
-                  aria-labelledby="locLabel"
-                  value={location}
-                  onChangeText={setLocation}
-                  placeholder="e.g. Main St & 5th"
-                  className="bg-background h-12 rounded-xl pl-9"
-                  returnKeyType="next"
-                />
-              </View>
-            </View>
-
             {/* Description */}
             <View className="gap-1">
               <Label nativeID="descLabel" className="text-xs">
@@ -300,6 +278,24 @@ export default function ReportIncidents() {
               isValidPhone={isValidPhone}
               formatPhoneDisplay={formatPhoneDisplay}
             />
+
+            {/* Location */}
+            <View className="gap-1 mt-4">
+              <Label nativeID="locLabel" className="text-xs">
+                <Text className="text-xs text-foreground">Location</Text>
+              </Label>
+              <View className="relative">
+                <MapPin size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 14 }} />
+                <Input
+                  aria-labelledby="locLabel"
+                  value={location}
+                  onChangeText={setLocation}
+                  placeholder="e.g. Main St & 5th"
+                  className="bg-background h-12 rounded-xl pl-9"
+                  returnKeyType="next"
+                />
+              </View>
+            </View>
 
             {/* Submit */}
             <Button onPress={onSubmit} size="lg" variant="default" className="mt-1 h-12 rounded-xl" disabled={!canSubmit}>
