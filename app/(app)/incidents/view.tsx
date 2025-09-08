@@ -9,8 +9,8 @@ import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { getIncident, Note, Report } from "@/lib/api";
 import useMountAnimation from "@/hooks/useMountAnimation";
+import { getIncident, Note, Report } from "@/lib/api";
 
 import {
   AlertTriangle,
@@ -49,28 +49,21 @@ function getMockReport(id: string): Report {
   };
 }
 
-
 export default function ViewIncident() {
   const { id, role: roleParam, tab: tabParam } = useLocalSearchParams<{ id?: string; role?: string; tab?: string }>();
   const role: Role = roleParam === "officer" ? "officer" : "citizen";
 
   const isSection = (v: any): v is Section => v === "pending" || v === "ongoing" || v === "solved";
-
-  // Which tab to return to (from where we came). This is *only* for back-navigation.
   const backTab: Section | undefined = isSection(tabParam) ? (tabParam as Section) : undefined;
 
   // Entrance animation
-  const { value: mount } = useMountAnimation({
-    damping: 14,
-    stiffness: 160,
-    mass: 0.6,
-  });
+  const { value: mount } = useMountAnimation({ damping: 14, stiffness: 160, mass: 0.6 });
   const animStyle = {
     opacity: mount.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] }),
     transform: [{ translateY: mount.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] }) }],
   } as const;
 
-  // Mock report for testing
+  // Mock report for offline retry option
   const mockReport = useMemo(() => (id ? getMockReport(id) : null), [id]);
 
   // Load report
@@ -91,31 +84,31 @@ export default function ViewIncident() {
         setPriority(data.priority);
         setNotes(data.notes ?? []);
       })
-      .catch(() => {
-        setLoadError(true);
-      });
+      .catch(() => setLoadError(true));
   }, [id]);
 
   useEffect(() => {
     load();
   }, [load]);
+
   const [showUpdate, setShowUpdate] = useState<boolean>(false);
   const [showNotes, setShowNotes] = useState<boolean>(false);
-
   const [newNoteDraft, setNewNoteDraft] = useState("");
   const [newNoteHeight, setNewNoteHeight] = useState<number | undefined>(undefined);
   const [notifyCitizen, setNotifyCitizen] = useState(true);
 
-  // SECTION for UI permissions: base on current status but respect incoming tab before load
+  // SECTION logic:
+  // - Officers: honor the tab they came from (Pending / Ongoing / Solved), regardless of current status.
+  // - Citizens: infer from current status.
   const section: Section = useMemo<Section>(() => {
-    if (!report && backTab) return backTab;
+    if (role === "officer" && backTab) return backTab;
     if (status === "Resolved") return "solved";
     if (status === "New" || status === "In Review") return "pending";
     return "ongoing"; // Approved, Assigned, Ongoing
-  }, [backTab, report, status]);
+  }, [role, backTab, status]);
 
-  // Officer permissions per section
-  const canApproveReject = role === "officer" && section === "pending" && (status === "New" || status === "In Review");
+  // Officer permissions strictly by tab (per product requirement)
+  const canApproveReject = role === "officer" && section === "pending";
   const canUpdateStatus = role === "officer" && section === "ongoing";
   const canAddNotes = role === "officer" && (section === "ongoing" || section === "solved");
 
@@ -126,7 +119,6 @@ export default function ViewIncident() {
       navigation.goBack();
     } else {
       if (role === "officer") {
-        // Prefer the tab the user came from; otherwise infer from current status
         router.replace({ pathname: "/incidents/manage-incidents", params: { role, tab: backTab ?? section } });
       } else {
         router.replace({ pathname: "/incidents/my-reports", params: { role } });
@@ -166,7 +158,7 @@ export default function ViewIncident() {
     toast.success(notifyCitizen && role === "officer" ? "Note added and citizen notified" : "Note added");
   };
 
-  // Icons & tones (mirrors Manage page)
+  // Icons & tones
   const prioPill = (p: Priority) =>
     p === "Urgent"
       ? { wrap: "bg-destructive/10 border-destructive/30", text: "text-destructive", Icon: AlertTriangle }
@@ -206,11 +198,7 @@ export default function ViewIncident() {
               <Text className="text-foreground">Use mock</Text>
             </Button>
           ) : null}
-          <Button
-            variant="secondary"
-            onPress={goBack}
-            className="h-10 px-3 rounded-lg"
-          >
+          <Button variant="secondary" onPress={goBack} className="h-10 px-3 rounded-lg">
             <Text className="text-foreground">Back</Text>
           </Button>
         </View>
@@ -309,7 +297,7 @@ export default function ViewIncident() {
           </Animated.View>
 
           {/* Officer actions by SECTION */}
-          {/* Pending: Approve/Reject only */}
+          {/* Pending: Approve/Reject (tab-driven) */}
           {role === "officer" && canApproveReject ? (
             <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-2 mt-4" style={animStyle}>
               <Text className="text-[12px] text-foreground">Decision</Text>
@@ -323,9 +311,7 @@ export default function ViewIncident() {
                 <Button variant="secondary" onPress={onReject} className="flex-1 h-10 rounded-lg">
                   <View className="flex-row items-center justify-center gap-1">
                     <AlertTriangle size={16} color="#DC2626" />
-                    <Text className="text-[13px]" style={{ color: "#DC2626" }}>
-                      Reject
-                    </Text>
+                    <Text className="text-[13px}" style={{ color: "#DC2626" }}>Reject</Text>
                   </View>
                 </Button>
               </View>
@@ -335,7 +321,7 @@ export default function ViewIncident() {
             </Animated.View>
           ) : null}
 
-          {/* Ongoing: Update Status + Add Notes */}
+          {/* Ongoing: Update Status + Add Notes (tab-driven) */}
           {role === "officer" && canUpdateStatus ? (
             <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-3 mt-4" style={animStyle}>
               <View className="flex-row items-center justify-between">
@@ -358,9 +344,7 @@ export default function ViewIncident() {
                         <Pressable
                           key={opt}
                           onPress={() => setStatus(opt)}
-                          className={`px-3 py-1 rounded-full border ${
-                            active ? "bg-foreground/10 border-transparent" : "bg-background border-border"
-                          }`}
+                          className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
                           android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                         >
                           <Text className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{opt}</Text>
@@ -390,28 +374,25 @@ export default function ViewIncident() {
 
           {/* Notes (citizen-visible): only render if notes exist or officer can add */}
           {(notes.length > 0 || canAddNotes) ? (
-          <Animated.View className="bg-muted rounded-2xl border border-border mt-4 overflow-hidden" style={animStyle}>
-            {/* Header */}
-            <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                <MessageSquare size={16} color="#0F172A" />
-                <Text className="text-[13px] text-foreground">Notes</Text>
+            <Animated.View className="bg-muted rounded-2xl border border-border mt-4 overflow-hidden" style={animStyle}>
+              {/* Header */}
+              <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2">
+                  <MessageSquare size={16} color="#0F172A" />
+                  <Text className="text-[13px] text-foreground">Notes</Text>
+                </View>
+
+                {canAddNotes ? (
+                  <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowNotes((v) => !v)}>
+                    <Text className="text-[12px] text-foreground">{showNotes ? "Close" : "Add note"}</Text>
+                  </Button>
+                ) : null}
               </View>
 
-              {canAddNotes ? (
-                <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowNotes((v) => !v)}>
-                  <Text className="text-[12px] text-foreground">{showNotes ? "Close" : "Add note"}</Text>
-                </Button>
-              ) : null}
-            </View>
-
-            {/* Existing notes */}
-            <View className="px-4 py-3">
-              {notes.length > 0 ? (
-                notes
-                  .slice()
-                  .reverse()
-                  .map((n) => (
+              {/* Existing notes */}
+              <View className="px-4 py-3">
+                {notes.length > 0 ? (
+                  notes.slice().reverse().map((n) => (
                     <View key={n.id} className="bg-background rounded-lg border border-border px-3 py-2 mb-2">
                       <Text className="text-[12px] text-foreground">{n.text}</Text>
                       <Text className="text-[10px] text-muted-foreground mt-1">
@@ -419,62 +400,57 @@ export default function ViewIncident() {
                       </Text>
                     </View>
                   ))
-              ) : (
-                <View className="bg-background rounded-lg border border-border px-3 py-2">
-                  <Text className="text-[12px] text-muted-foreground">No notes yet.</Text>
-                </View>
-              )}
-            </View>
+                ) : (
+                  <View className="bg-background rounded-lg border border-border px-3 py-2">
+                    <Text className="text-[12px] text-muted-foreground">No notes yet.</Text>
+                  </View>
+                )}
+              </View>
 
-            {/* Composer (officer, ongoing/solved only) */}
-            {canAddNotes && showNotes ? (
-              <>
-                <View className="px-4">
-                  <Input
-                    value={newNoteDraft}
-                    onChangeText={setNewNoteDraft}
-                    onContentSizeChange={(e) => setNewNoteHeight(e.nativeEvent.contentSize.height)}
-                    placeholder="Add a note for the citizen…"
-                    className="bg-background rounded-xl"
-                    style={{
-                      minHeight: 96,
-                      height: Math.max(96, newNoteHeight ?? 0),
-                      textAlignVertical: "top",
-                      paddingTop: 12,
-                    }}
-                    multiline
-                    numberOfLines={4}
-                    scrollEnabled={false}
-                  />
-                </View>
+              {/* Composer (officer, ongoing/solved only) */}
+              {canAddNotes && showNotes ? (
+                <>
+                  <View className="px-4">
+                    <Input
+                      value={newNoteDraft}
+                      onChangeText={setNewNoteDraft}
+                      onContentSizeChange={(e) => setNewNoteHeight(e.nativeEvent.contentSize.height)}
+                      placeholder="Add a note for the citizen…"
+                      className="bg-background rounded-xl"
+                      style={{ minHeight: 96, height: Math.max(96, newNoteHeight ?? 0), textAlignVertical: "top", paddingTop: 12 }}
+                      multiline
+                      numberOfLines={4}
+                      scrollEnabled={false}
+                    />
+                  </View>
 
-                <View className="border-t border-border px-4 py-3 bg-muted">
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Switch value={notifyCitizen} onValueChange={setNotifyCitizen} />
-                      <Text className="text-[12px] text-foreground">Notify citizen</Text>
-                    </View>
-                    <View className="flex-row items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        className="h-9 px-3 rounded-lg"
-                        onPress={() => {
-                          setShowNotes(false);
-                          setNewNoteDraft("");
-                          setNewNoteHeight(undefined);
-                        }}
-                      >
-                        <Text className="text-foreground text-[12px]">Cancel</Text>
-                      </Button>
-                      <Button className="h-9 px-3 rounded-lg" onPress={addNote}>
-                        <Text className="text-primary-foreground text-[12px]">Add note</Text>
-                      </Button>
+                  <View className="border-t border-border px-4 py-3 bg-muted">
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-2">
+                        <Switch value={notifyCitizen} onValueChange={setNotifyCitizen} />
+                        <Text className="text-[12px] text-foreground">Notify citizen</Text>
+                      </View>
+                      <View className="flex-row items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          className="h-9 px-3 rounded-lg"
+                          onPress={() => {
+                            setShowNotes(false);
+                            setNewNoteDraft("");
+                            setNewNoteHeight(undefined);
+                          }}
+                        >
+                          <Text className="text-foreground text-[12px]">Cancel</Text>
+                        </Button>
+                        <Button className="h-9 px-3 rounded-lg" onPress={addNote}>
+                          <Text className="text-primary-foreground text-[12px]">Add note</Text>
+                        </Button>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </>
-            ) : null}
-          </Animated.View>
+                </>
+              ) : null}
+            </Animated.View>
           ) : null}
 
           {/* Citizen reassurance footer */}
