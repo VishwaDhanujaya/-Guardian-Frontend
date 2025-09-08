@@ -1,13 +1,15 @@
 // app/(app)/lost-found/view.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, ScrollView, View } from "react-native";
 
-import { Text } from "@/components/ui/text";
+import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/toast";
+import { Text } from "@/components/ui/text";
+import useMountAnimation from "@/hooks/useMountAnimation";
+import { FoundItemDetail, getFoundItem, getLostItem, LostItemDetail } from "@/lib/api";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,8 +18,6 @@ import {
   Info as InfoIcon,
   PackageSearch,
 } from "lucide-react-native";
-import useMountAnimation from "@/hooks/useMountAnimation";
-import { getFoundItem, getLostItem, FoundItemDetail, LostItemDetail } from "@/lib/api";
 
 type Section = "pending" | "searching" | "returned";
 const isSection = (v: any): v is Section => v === "pending" || v === "searching" || v === "returned";
@@ -79,23 +79,26 @@ export default function LostFoundView() {
     load();
   }, [id, type]);
 
+  // ⇣ Key change: for officers, always honor the tab they came from
   const section = useMemo<Section | undefined>(() => {
     if (type !== "lost") return undefined;
-    if (!item && backTab) return backTab;
+    if (role === "officer" && backTab) return backTab; // <-- tab-driven for officers
+    // Citizen (or no tab): infer from current status
     if (status === "Returned") return "returned";
     if (status === "New" || status === "In Review") return "pending";
     return "searching"; // Approved, Assigned, Searching
-  }, [backTab, item, status, type]);
+  }, [backTab, role, status, type]);
 
   const goBack = useCallback(() => {
     if (navigation?.canGoBack?.()) navigation.goBack();
     else if (role === "officer" && type === "lost") {
-      router.replace({ pathname: "/lost-found/officer-lost", params: { role, tab: backTab ?? section } });
+      router.replace({ pathname: "/(app)/lost-found/officer-lost", params: { role, tab: backTab ?? section } });
     } else {
       router.replace({ pathname: "/home", params: { role: role === "officer" ? "officer" : "citizen" } });
     }
   }, [navigation, role, type, backTab, section]);
 
+  // Permissions based on officer tab (as requested)
   const canApproveReject = role === "officer" && section === "pending";
   const canUpdateStatus = role === "officer" && section === "searching";
   const canAddNotes = role === "officer" && (section === "searching" || section === "returned");
@@ -177,28 +180,20 @@ export default function LostFoundView() {
           </View>
           <View style={{ width: 56 }} />
         </View>
+
         <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-3" style={animStyle}>
           {renderField("Name", editing ? draft.name : item.name, (t) => setDraft((d) => ({ ...d, name: t })), editing)}
-          {renderField(
-            "Description",
-            editing ? draft.description : item.description,
-            (t) => setDraft((d) => ({ ...d, description: t })),
-            editing,
-          )}
+          {renderField("Description", editing ? draft.description : item.description, (t) => setDraft((d) => ({ ...d, description: t })), editing)}
           {renderField("Model", editing ? draft.model : item.model, (t) => setDraft((d) => ({ ...d, model: t })), editing)}
           {renderField("Serial/IMEI", editing ? draft.serial : item.serial, (t) => setDraft((d) => ({ ...d, serial: t })), editing)}
           {renderField("Colour", editing ? draft.color : item.color, (t) => setDraft((d) => ({ ...d, color: t })), editing)}
-          {renderField(
-            "Last location",
-            editing ? draft.lastLocation : item.lastLocation,
-            (t) => setDraft((d) => ({ ...d, lastLocation: t })),
-            editing,
-          )}
+          {renderField("Last location", editing ? draft.lastLocation : item.lastLocation, (t) => setDraft((d) => ({ ...d, lastLocation: t })), editing)}
           {"branch" in item ? renderField("Police branch", item.branch) : null}
           {"reportedBy" in item ? renderField("Reported by", item.reportedBy) : null}
           {type === "lost" && "status" in item ? renderField("Status", status) : null}
         </Animated.View>
 
+        {/* Citizen edit (local-only) */}
         {role === "citizen" ? (
           <View className="flex-row flex-wrap items-center gap-2 mt-4">
             {editing ? (
@@ -218,6 +213,7 @@ export default function LostFoundView() {
           </View>
         ) : null}
 
+        {/* Officer: Pending tab → Approve / Reject */}
         {role === "officer" && type === "lost" && canApproveReject ? (
           <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-2 mt-4" style={animStyle}>
             <Text className="text-[12px] text-foreground">Decision</Text>
@@ -240,15 +236,12 @@ export default function LostFoundView() {
           </Animated.View>
         ) : null}
 
+        {/* Officer: Searching tab → Update status + Notes */}
         {role === "officer" && type === "lost" && canUpdateStatus ? (
           <Animated.View className="bg-muted rounded-2xl border border-border p-4 gap-3 mt-4" style={animStyle}>
             <View className="flex-row items-center justify-between">
               <Text className="text-[12px] text-foreground">Status</Text>
-              <Button
-                variant="secondary"
-                className="h-9 px-3 rounded-lg"
-                onPress={() => setShowUpdate((v) => !v)}
-              >
+              <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowUpdate((v) => !v)}>
                 <View className="flex-row items-center gap-1">
                   <ClipboardList size={14} color="#0F172A" />
                   <Text className="text-[12px] text-foreground">{showUpdate ? "Close" : "Update status"}</Text>
@@ -266,9 +259,7 @@ export default function LostFoundView() {
                       <Pressable
                         key={opt}
                         onPress={() => setStatus(opt)}
-                        className={`px-3 py-1 rounded-full border ${
-                          active ? "bg-foreground/10 border-transparent" : "bg-background border-border"
-                        }`}
+                        className={`px-3 py-1 rounded-full border ${active ? "bg-foreground/10 border-transparent" : "bg-background border-border"}`}
                         android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                       >
                         <Text className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{opt}</Text>
@@ -278,11 +269,7 @@ export default function LostFoundView() {
                 </View>
 
                 <View className="flex-row items-center justify-end gap-2 mt-3">
-                  <Button
-                    variant="secondary"
-                    className="h-9 px-3 rounded-lg"
-                    onPress={() => setShowUpdate(false)}
-                  >
+                  <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowUpdate(false)}>
                     <Text className="text-foreground text-[12px]">Cancel</Text>
                   </Button>
                   <Button
@@ -301,6 +288,7 @@ export default function LostFoundView() {
           </Animated.View>
         ) : null}
 
+        {/* Officer: Searching/Returned tabs → Notes */}
         {role === "officer" && type === "lost" && (canAddNotes || notes.length > 0) ? (
           <Animated.View className="bg-muted rounded-2xl border border-border mt-4 overflow-hidden" style={animStyle}>
             <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
@@ -309,11 +297,7 @@ export default function LostFoundView() {
                 <Text className="text-[13px] text-foreground">Notes</Text>
               </View>
               {canAddNotes ? (
-                <Button
-                  variant="secondary"
-                  className="h-9 px-3 rounded-lg"
-                  onPress={() => setShowNotes((v) => !v)}
-                >
+                <Button variant="secondary" className="h-9 px-3 rounded-lg" onPress={() => setShowNotes((v) => !v)}>
                   <Text className="text-[12px] text-foreground">{showNotes ? "Close" : "Add note"}</Text>
                 </Button>
               ) : null}
