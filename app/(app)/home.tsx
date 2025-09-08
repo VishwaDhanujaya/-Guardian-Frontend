@@ -509,7 +509,7 @@ export default function Home() {
                         actionLabel="See all"
                         onAction={goCitizenAlerts}
                       />
-                      {/* Categories removed from preview for a cleaner list */}
+                      {/* Categories removed from preview for a cleaner lis */}
                       <List
                         items={citizenAlerts}
                         className="mt-2"
