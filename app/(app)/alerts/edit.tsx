@@ -64,18 +64,27 @@ export default function EditAlert() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      setLoading(true);
-      getAlert(id)
-        .then((data) => {
+    if (!id) return;
+    let canceled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getAlert(id);
+        if (!canceled) {
           setExisting(data);
           setTitle(data.title);
           setMessage(data.message);
           setRegion(data.region);
-        })
-        .catch(() => toast.error("Failed to load alert, using mock"))
-        .finally(() => setLoading(false));
-    }
+        }
+      } catch {
+        if (!canceled) toast.error("Failed to load alert, using mock");
+      } finally {
+        if (!canceled) setLoading(false);
+      }
+    })();
+    return () => {
+      canceled = true;
+    };
   }, [id]);
 
   // Validation

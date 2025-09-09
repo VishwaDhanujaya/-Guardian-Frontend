@@ -39,10 +39,20 @@ export default function CitizenLostFound() {
   const [openForm, setOpenForm] = useState(false);
 
   useEffect(() => {
-    fetchFoundItems()
-      .then(setFoundItems)
-      .catch(() => toast.error("Failed to load items"))
-      .finally(() => setLoadingItems(false));
+    let canceled = false;
+    (async () => {
+      try {
+        const data = await fetchFoundItems();
+        if (!canceled) setFoundItems(data);
+      } catch {
+        if (!canceled) toast.error("Failed to load items");
+      } finally {
+        if (!canceled) setLoadingItems(false);
+      }
+    })();
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   const filteredItems = foundItems.filter((f) =>

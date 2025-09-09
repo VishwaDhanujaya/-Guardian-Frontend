@@ -53,10 +53,20 @@ export default function ManageAlerts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAlerts()
-      .then(setRows)
-      .catch(() => toast.error("Failed to load alerts"))
-      .finally(() => setLoading(false));
+    let canceled = false;
+    (async () => {
+      try {
+        const data = await fetchAlerts();
+        if (!canceled) setRows(data);
+      } catch {
+        if (!canceled) toast.error("Failed to load alerts");
+      } finally {
+        if (!canceled) setLoading(false);
+      }
+    })();
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   const visibleRows = useMemo(() => [...rows], [rows]);

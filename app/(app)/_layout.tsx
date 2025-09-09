@@ -1,6 +1,7 @@
 // app/(app)/_layout.tsx
 import { Stack } from "expo-router";
 import React from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 /**
  * App group layout.
@@ -8,11 +9,13 @@ import React from "react";
  */
 export default function AppLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="home" />
-      <Stack.Screen name="incidents" />
-      <Stack.Screen name="alerts" />
-      <Stack.Screen name="lost-found" />
-    </Stack>
+    <ProtectedRoute>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="home" />
+        <Stack.Screen name="incidents" />
+        <Stack.Screen name="alerts" />
+        <Stack.Screen name="lost-found" />
+      </Stack>
+    </ProtectedRoute>
   );
 }

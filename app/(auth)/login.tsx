@@ -27,8 +27,7 @@ import {
   Shield,
   UserRound,
 } from "lucide-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { loginUser } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type Role = "citizen" | "officer";
 
@@ -44,6 +43,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const isOfficer = tab === "officer";
   const canContinue = identifier.trim().length > 0 && password.length >= 6;
@@ -107,14 +107,9 @@ export default function Login() {
     if (safeId !== identifier) setIdentifier(safeId);
     try {
       setLoading(true);
-      const res = await loginUser(safeId, password, isOfficer ? "officer" : "citizen");
-      await AsyncStorage.setItem("authToken", res.token);
-      toast.success(`Welcome back, ${res.user.name}!`);
-      if (res.requiresMfa) {
-        router.replace({ pathname: "/mfa", params: { role: "officer" } });
-      } else {
-        router.replace({ pathname: "/home", params: { role: res.user.role } });
-      }
+      await login(safeId, password, isOfficer ? "officer" : "citizen");
+      toast.success("Welcome back!");
+      router.replace({ pathname: "/home", params: { role: isOfficer ? "officer" : "citizen" } });
     } catch (e: any) {
       toast.error(e.message ?? "Sign in failed");
     } finally {

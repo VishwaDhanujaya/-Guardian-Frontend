@@ -229,19 +229,20 @@ export default function Home() {
   const onSignOut = () => router.replace('/login');
 
   useEffect(() => {
-    let mounted = true;
-    AsyncStorage.getItem('authToken').then((token: string | null) => {
-      fetchProfile(token ?? '', role)
-        .then((data) => {
-          if (mounted) setProfile(data);
-        })
-        .catch(() => toast.error('Failed to load profile'))
-        .finally(() => {
-          if (mounted) setProfileLoading(false);
-        });
-    });
+    let canceled = false;
+    (async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        const data = await fetchProfile(token ?? '', role);
+        if (!canceled) setProfile(data);
+      } catch {
+        if (!canceled) toast.error('Failed to load profile');
+      } finally {
+        if (!canceled) setProfileLoading(false);
+      }
+    })();
     return () => {
-      mounted = false;
+      canceled = true;
     };
   }, [role]);
 

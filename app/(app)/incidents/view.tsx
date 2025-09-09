@@ -80,20 +80,19 @@ export default function ViewIncident() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadError, setLoadError] = useState(false);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!id) return;
     setLoadError(false);
     setReport(null);
-    getIncident(id)
-      .then((data) => {
-        setReport(data);
-        setStatus(data.status);
-        setPriority(data.priority);
-        setNotes(data.notes ?? []);
-      })
-      .catch(() => {
-        setLoadError(true);
-      });
+    try {
+      const data = await getIncident(id);
+      setReport(data);
+      setStatus(data.status);
+      setPriority(data.priority);
+      setNotes(data.notes ?? []);
+    } catch {
+      setLoadError(true);
+    }
   }, [id]);
 
   useEffect(() => {
