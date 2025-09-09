@@ -5,6 +5,7 @@ import { Slot } from "expo-router";
 import React from "react";
 import { SafeAreaView, StatusBar } from "react-native";
 import "../global.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 /**
  * Root application layout.
@@ -16,9 +17,11 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-        <Slot />
-      </SafeAreaView>
+      <AuthProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+          <Slot />
+        </SafeAreaView>
+      </AuthProvider>
 
       {/* Global overlay hosts (single mount) */}
       <ToastOverlay />

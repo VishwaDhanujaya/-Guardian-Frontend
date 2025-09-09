@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { Lock, Mail, UserRound } from "lucide-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { registerUser } from "@/lib/api";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
 import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
@@ -30,6 +31,7 @@ export default function Register() {
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
 
   // Focus chain
   const lastNameRef = useRef<any>(null);
@@ -47,24 +49,26 @@ export default function Register() {
     confirm === password;
 
   /**
-   * Submit registration via mock backend.
+   * Submit registration via backend.
    */
   const onSignUp = async (): Promise<void> => {
     if (!canSubmit || loading) return;
     try {
       setLoading(true);
-      const res = await registerUser({
+      const res = await apiService.post("/api/v1/auth/register", {
         firstName: sanitize(firstName),
         lastName: sanitize(lastName),
         username: sanitize(username),
         email: sanitize(email),
         password,
       });
-      await AsyncStorage.setItem("authToken", res.token);
-      toast.success(`Welcome, ${res.user.name}!`);
-      router.replace({ pathname: "/home", params: { role: "citizen" } });
+      const { accessToken, refreshToken } = res.data.data;
+      await login(accessToken, refreshToken);
+      toast.success("Welcome!");
+      router.replace("/home");
     } catch (e: any) {
-      toast.error(e.message ?? "Registration failed");
+      const message = e.response?.data?.message ?? "Registration failed";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
