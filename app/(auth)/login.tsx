@@ -27,8 +27,9 @@ import {
   Shield,
   UserRound,
 } from "lucide-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { loginUser } from "@/lib/api";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
 
 type Role = "citizen" | "officer";
 
@@ -44,6 +45,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
 
   const isOfficer = tab === "officer";
   const canContinue = identifier.trim().length > 0 && password.length >= 6;
@@ -99,7 +101,7 @@ export default function Login() {
   };
 
   /**
-   * Handle sign-in flow via mock backend.
+   * Handle sign-in flow via backend.
    */
   const onSignIn = async (): Promise<void> => {
     if (loading) return;
@@ -107,16 +109,18 @@ export default function Login() {
     if (safeId !== identifier) setIdentifier(safeId);
     try {
       setLoading(true);
-      const res = await loginUser(safeId, password, isOfficer ? "officer" : "citizen");
-      await AsyncStorage.setItem("authToken", res.token);
-      toast.success(`Welcome back, ${res.user.name}!`);
-      if (res.requiresMfa) {
-        router.replace({ pathname: "/mfa", params: { role: "officer" } });
-      } else {
-        router.replace({ pathname: "/home", params: { role: res.user.role } });
-      }
+      const res = await apiService.post("/api/v1/auth/login", {
+        identifier: safeId,
+        password,
+        role: isOfficer ? "officer" : "citizen",
+      });
+      const { accessToken, refreshToken } = res.data.data;
+      await login(accessToken, refreshToken);
+      toast.success("Welcome back!");
+      router.replace("/home");
     } catch (e: any) {
-      toast.error(e.message ?? "Sign in failed");
+      const message = e.response?.data?.message ?? "Sign in failed";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

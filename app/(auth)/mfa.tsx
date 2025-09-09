@@ -18,8 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { verifyMfa } from "@/lib/api";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
 import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
@@ -34,22 +35,28 @@ export default function Mfa() {
   const [cooldown, setCooldown] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
 
   const isValid = code.length === 6;
 
   /**
-   * Verify the provided code via mock backend.
+   * Verify the provided code via backend.
    */
   const onVerify = async (): Promise<void> => {
     if (!isValid || loading) return;
     try {
       setLoading(true);
-      const res = await verifyMfa(code, role === "officer" ? "officer" : "citizen");
-      await AsyncStorage.setItem("authToken", res.token);
+      const res = await apiService.post("/api/v1/auth/mfa", {
+        code,
+        role: role === "officer" ? "officer" : "citizen",
+      });
+      const { accessToken, refreshToken } = res.data.data;
+      await login(accessToken, refreshToken);
       toast.success("Verified");
-      router.replace({ pathname: "/home", params: { role: res.user.role } });
+      router.replace("/home");
     } catch (e: any) {
-      toast.error(e.message ?? "Invalid code");
+      const message = e.response?.data?.message ?? "Invalid code";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
