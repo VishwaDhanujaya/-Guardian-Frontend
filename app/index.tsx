@@ -1,6 +1,6 @@
 // app/index.tsx
 import { router } from "expo-router";
-import React, { useEffect, useContext } from "react";
+import { useEffect, useContext } from "react";
 import { ActivityIndicator, InteractionManager, View } from "react-native";
 import { AuthContext } from "@/context/AuthContext";
 

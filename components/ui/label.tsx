@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import * as LabelPrimitive from '@rn-primitives/label';
 import { Platform } from 'react-native';
+import type { RefAttributes } from 'react';
 
 function Label({
   className,
@@ -10,7 +11,7 @@ function Label({
   onPressOut,
   disabled,
   ...props
-}: LabelPrimitive.TextProps & React.RefAttributes<LabelPrimitive.TextRef>) {
+}: LabelPrimitive.TextProps & RefAttributes<LabelPrimitive.TextRef>) {
   return (
     <LabelPrimitive.Root
       className={cn(

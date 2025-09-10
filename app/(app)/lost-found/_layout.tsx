@@ -1,6 +1,5 @@
 // app/(app)/lost-found/_layout.tsx
 import { Stack } from "expo-router";
-import React from "react";
 
 /**
  * Lost & Found group layout.

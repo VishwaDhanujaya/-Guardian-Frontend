@@ -20,15 +20,15 @@ declare module '*.webp' {
   export default src;
 }
 declare module '*.svg' {
-  import * as React from 'react';
+  import type { FC } from 'react';
   import { SvgProps } from 'react-native-svg';
-  const content: React.FC<SvgProps>;
+  const content: FC<SvgProps>;
   export default content;
 }
 
 declare module '@react-native-async-storage/async-storage';
 declare module 'expo-symbols' {
-  import { ComponentType } from 'react';
+  import type { ComponentType } from 'react';
   import { ViewProps } from 'react-native';
 
   export type SymbolWeight =

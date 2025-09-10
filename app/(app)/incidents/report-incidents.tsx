@@ -1,7 +1,16 @@
 // app/(app)/incidents/report-incidents.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 import type { NativeSyntheticEvent, TextInput as RNTextInput, TextInputContentSizeChangeEventData } from "react-native";
 import {
   Animated,
@@ -170,7 +179,7 @@ export default function ReportIncidents() {
     Icon,
   }: {
     value: typeof category;
-    Icon: React.ComponentType<{ size?: number; color?: string }>;
+    Icon: ComponentType<{ size?: number; color?: string }>;
   }) => {
     const active = category === value;
     return (
@@ -321,8 +330,8 @@ function WitnessSection({
   formatPhoneDisplay,
 }: {
   witnesses: Witness[];
-  setWitnesses: React.Dispatch<React.SetStateAction<Witness[]>>;
-  nameRefs: React.MutableRefObject<Record<string, RNTextInput | null>>;
+  setWitnesses: Dispatch<SetStateAction<Witness[]>>;
+  nameRefs: MutableRefObject<Record<string, RNTextInput | null>>;
   isValidPhone: (v: string) => boolean;
   formatPhoneDisplay: (v: string) => string;
 }) {

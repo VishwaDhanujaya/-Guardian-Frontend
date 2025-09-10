@@ -1,6 +1,12 @@
 // app/(auth)/login.tsx
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useContext,
+  type ComponentType,
+} from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -27,7 +33,6 @@ import {
   Shield,
   UserRound,
 } from "lucide-react-native";
-import { useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 
@@ -319,7 +324,7 @@ function SegTab({
 }: {
   active: boolean;
   label: string;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+    icon: ComponentType<{ size?: number; color?: string }>;
   onPress: () => void;
 }) {
   return (

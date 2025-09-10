@@ -1,7 +1,7 @@
 // app/(app)/incidents/manage-incidents.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   Animated,
   Keyboard,
@@ -235,7 +235,7 @@ export default function ManageIncidents() {
     tab: TabKey;
     label: string;
     count?: number;
-    Icon: React.ComponentType<{ size?: number; color?: string }>;
+    Icon: ComponentType<{ size?: number; color?: string }>;
   }) => {
     const active = activeTab === tab;
     const h = isCompact ? 36 : 40;
