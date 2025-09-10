@@ -10,7 +10,7 @@ import "../global.css";
 /**
  * Root application layout.
  * - Applies a light background and safe-area container.
- * - Renders routed content with <Slot />.
+ * - Renders routed content via <Slot />.
  * - Hosts global overlays (toasts, portals) mounted once at the root.
  */
 export default function RootLayout() {
@@ -18,7 +18,7 @@ export default function RootLayout() {
     <>
       <StatusBar barStyle="dark-content" />
       <AuthProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#aa3d3dff" }}>
           <Slot />
         </SafeAreaView>
       </AuthProvider>
