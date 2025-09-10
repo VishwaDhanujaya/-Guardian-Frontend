@@ -2,6 +2,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Image,
@@ -17,6 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * MFA verification screen.
@@ -29,22 +34,31 @@ export default function Mfa() {
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
 
   const isValid = code.length === 6;
 
   /**
-   * Verify the provided code and navigate on success.
-   * Uses a demo code for now; replace with backend validation.
+   * Verify the provided code via backend.
    */
-  const onVerify = (): void => {
-    if (code === "123456") {
-      toast.success("Verified");
-      router.replace({
-        pathname: "/home",
-        params: { role: role === "officer" ? "officer" : "citizen" },
+  const onVerify = async (): Promise<void> => {
+    if (!isValid || loading) return;
+    try {
+      setLoading(true);
+      const res = await apiService.post("/api/v1/auth/mfa", {
+        code,
+        role: role === "officer" ? "officer" : "citizen",
       });
-    } else {
-      toast.error("Invalid code");
+      const { accessToken, refreshToken } = res.data.data;
+      await login(accessToken, refreshToken);
+      toast.success("Verified");
+      router.replace("/home");
+    } catch (e: any) {
+      const message = e.response?.data?.message ?? "Invalid code";
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,18 +90,12 @@ export default function Mfa() {
   }, [cooldown]);
 
   // Motion: form entrance + subtitle cross-fade
-  const formAnim = useRef(new Animated.Value(0.9)).current;
+  const { value: formAnim } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
   const subtitleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.spring(formAnim, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [formAnim]);
 
   useEffect(() => {
     subtitleAnim.setValue(0);
@@ -176,9 +184,13 @@ export default function Mfa() {
               size="lg"
               variant="default"
               className="mt-1 h-12 rounded-xl"
-              disabled={!isValid}
+              disabled={!isValid || loading}
             >
-              <Text className="font-semibold text-primary-foreground">Verify</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="font-semibold text-primary-foreground">Verify</Text>
+              )}
             </Button>
 
             {/* Resend */}

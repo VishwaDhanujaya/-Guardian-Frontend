@@ -1,7 +1,7 @@
 // app/(auth)/register.tsx
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, Image, Keyboard, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { ActivityIndicator, Animated, Image, Keyboard, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import Logo from "@/assets/images/icon.png";
@@ -11,23 +11,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { Lock, Mail, UserRound } from "lucide-react-native";
+import { useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { apiService } from "@/services/apiService";
+import useMountAnimation from "@/hooks/useMountAnimation";
 
 /**
  * Citizen account registration screen.
- * - Collects first/last name, email, and password.
+ * - Collects first/last name, username, email, and password.
  * - Basic client-side validation (length, match).
  * - Navigates to Login after successful submission (stub).
  */
 export default function Register() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
 
   // Focus chain
   const lastNameRef = useRef<any>(null);
+  const usernameRef = useRef<any>(null);
   const emailRef = useRef<any>(null);
   const passwordRef = useRef<any>(null);
   const confirmRef = useRef<any>(null);
@@ -35,32 +43,43 @@ export default function Register() {
   const canSubmit =
     firstName.trim().length > 1 &&
     lastName.trim().length > 1 &&
+    username.trim().length > 2 &&
     email.trim().length > 3 &&
     password.length >= 6 &&
     confirm === password;
 
   /**
-   * Submit registration (stub).
-   * Replace with API integration and error handling as needed.
-   * Shows greeting using first name.
+   * Submit registration via backend.
    */
-  const onSignUp = (): void => {
-    if (!canSubmit) return;
-    toast.success(`Welcome, ${firstName.trim()}!`);
-    router.replace("/login");
+  const onSignUp = async (): Promise<void> => {
+    if (!canSubmit || loading) return;
+    try {
+      setLoading(true);
+      const res = await apiService.post("/api/v1/auth/register", {
+        firstName: sanitize(firstName),
+        lastName: sanitize(lastName),
+        username: sanitize(username),
+        email: sanitize(email),
+        password,
+      });
+      const { accessToken, refreshToken } = res.data.data;
+      await login(accessToken, refreshToken);
+      toast.success("Welcome!");
+      router.replace("/home");
+    } catch (e: any) {
+      const message = e.response?.data?.message ?? "Registration failed";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Entrance motion for form
-  const formAnim = useRef(new Animated.Value(0.9)).current;
-  useEffect(() => {
-    Animated.spring(formAnim, {
-      toValue: 1,
-      damping: 14,
-      stiffness: 160,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-  }, [formAnim]);
+  const { value: formAnim } = useMountAnimation({
+    damping: 14,
+    stiffness: 160,
+    mass: 0.6,
+  });
 
   const formOpacity = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [0.95, 1] });
   const formTranslateY = formAnim.interpolate({ inputRange: [0.9, 1], outputRange: [6, 0] });
@@ -134,6 +153,29 @@ export default function Register() {
                   onChangeText={setLastName}
                   onBlur={() => setLastName((v) => sanitize(v))}
                   placeholder="Johnson"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => usernameRef.current?.focus()}
+                  className="bg-background h-12 rounded-xl pl-9"
+                />
+              </View>
+            </View>
+
+            {/* Username */}
+            <View className="gap-1">
+              <Label nativeID="usernameLabel" className="text-xs">
+                <Text className="text-xs text-foreground">Username</Text>
+              </Label>
+              <View className="relative">
+                <UserRound size={16} color="#94A3B8" style={{ position: "absolute", left: 12, top: 14 }} />
+                <Input
+                  ref={usernameRef}
+                  aria-labelledby="usernameLabel"
+                  value={username}
+                  onChangeText={setUsername}
+                  onBlur={() => setUsername((v) => sanitize(v))}
+                  autoCapitalize="none"
+                  placeholder="alexj"
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onSubmitEditing={() => emailRef.current?.focus()}
@@ -232,9 +274,13 @@ export default function Register() {
               size="lg"
               variant="default"
               className="mt-1 h-12 rounded-xl"
-              disabled={!canSubmit}
+              disabled={!canSubmit || loading}
             >
-              <Text className="font-semibold text-primary-foreground">Create account</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="font-semibold text-primary-foreground">Create account</Text>
+              )}
             </Button>
           </Animated.View>
 

@@ -1,7 +1,8 @@
 // app/index.tsx
 import { router } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useContext } from "react";
 import { ActivityIndicator, InteractionManager, View } from "react-native";
+import { AuthContext } from "@/context/AuthContext";
 
 /**
  * Initial splash/redirect screen.
@@ -9,13 +10,14 @@ import { ActivityIndicator, InteractionManager, View } from "react-native";
  * - Avoids navigating before the root layout has mounted.
  */
 export default function Index() {
+  const { session } = useContext(AuthContext);
+
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
-      // Route groups are not part of the URL; redirect to clean path.
-      router.replace("/login");
+      router.replace(session ? "/home" : "/login");
     });
     return () => task.cancel();
-  }, []);
+  }, [session]);
 
   return (
     <View
