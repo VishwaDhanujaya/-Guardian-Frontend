@@ -1,6 +1,5 @@
 // app/(app)/alerts/_layout.tsx
 import { Stack } from "expo-router";
-import React from "react";
 
 /**
  * Alerts group layout.

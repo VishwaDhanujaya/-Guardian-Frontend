@@ -1,6 +1,6 @@
 // app/(auth)/register.tsx
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useRef, useState, useContext } from "react";
 import { ActivityIndicator, Animated, Image, Keyboard, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { Lock, Mail, UserRound } from "lucide-react-native";
-import { useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { apiService } from "@/services/apiService";
 import useMountAnimation from "@/hooks/useMountAnimation";

@@ -1,6 +1,15 @@
 // app/home.tsx
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type FC,
+  type ReactNode,
+} from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -43,7 +52,7 @@ import {
 } from 'lucide-react-native';
 
 type Role = 'citizen' | 'officer';
-type IconType = React.ComponentType<{ size?: number; color?: string }>;
+type IconType = ComponentType<{ size?: number; color?: string }>;
 type Tone = 'primary' | 'ring' | 'accent' | 'destructive' | 'foreground';
 
 /** Tailwind tone → class maps (BG/Text variants and faint BG) */
@@ -577,14 +586,14 @@ function getGreeting(hour: number): 'Good morning' | 'Good afternoon' | 'Good ev
 /* -------------------- UI Partials -------------------- */
 
 /** Card container with standard padding, border, and rounded corners. */
-const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const Card: FC<{ children: ReactNode }> = ({ children }) => (
   <View className="rounded-2xl border border-border bg-muted p-5">{children}</View>
 );
 
 /**
  * Section header with title, optional action, and tone bar.
  */
-const CardHeader: React.FC<{
+const CardHeader: FC<{
   title: string;
   actionLabel?: string;
   onAction?: () => void;
@@ -608,7 +617,7 @@ const CardHeader: React.FC<{
 );
 
 /** Compact trend chip (up/down + %). */
-const TrendChip: React.FC<{ dir: 'up' | 'down'; pct: number; tone: Tone }> = ({
+const TrendChip: FC<{ dir: 'up' | 'down'; pct: number; tone: Tone }> = ({
   dir,
   pct,
   tone,
@@ -627,7 +636,7 @@ const TrendChip: React.FC<{ dir: 'up' | 'down'; pct: number; tone: Tone }> = ({
 );
 
 /** KPI block with optional trend and progress bar. */
-const Kpi: React.FC<{
+const Kpi: FC<{
   label: string;
   value: number | string;
   tone?: Tone;
@@ -663,7 +672,7 @@ type Tile = {
 };
 
 /** Responsive 2-column grid of action tiles. */
-const TileGrid: React.FC<{ tiles: Tile[] }> = ({ tiles }) => (
+const TileGrid: FC<{ tiles: Tile[] }> = ({ tiles }) => (
   <View className="-mx-1 mt-3 flex-row flex-wrap">
     {tiles.map((t, i) => (
       <View key={i} className="mb-2 basis-1/2 px-1">
@@ -674,7 +683,7 @@ const TileGrid: React.FC<{ tiles: Tile[] }> = ({ tiles }) => (
 );
 
 /** Action tile button with optional count badge. */
-const IconTileButton: React.FC<Tile> = ({
+const IconTileButton: FC<Tile> = ({
   label,
   icon: IconCmp,
   onPress,
@@ -719,7 +728,7 @@ type ListItem = {
 };
 
 /** Empty state block used by list/timeline components. */
-const EmptyState: React.FC<{
+const EmptyState: FC<{
   title: string;
   subtitle?: string;
   icon?: IconType;
@@ -737,7 +746,7 @@ const EmptyState: React.FC<{
 );
 
 /** Generic list with icon, title, and meta; shows empty state when needed, supports onPress per row. */
-const List: React.FC<{
+const List: FC<{
   items: ListItem[];
   className?: string;
   emptyTitle?: string;
@@ -797,7 +806,7 @@ const List: React.FC<{
 };
 
 /** Vertical timeline with bullets and a guiding line; includes empty state. */
-const Timeline: React.FC<{
+const Timeline: FC<{
   items: ListItem[];
   className?: string;
   emptyTitle?: string;
@@ -844,7 +853,7 @@ const Timeline: React.FC<{
 };
 
 /** Floating chatbot widget (citizen only). */
-const ChatbotWidget: React.FC<{
+const ChatbotWidget: FC<{
   open: boolean;
   onToggle: () => void;
   message: string;

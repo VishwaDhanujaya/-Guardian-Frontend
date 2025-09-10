@@ -1,6 +1,6 @@
 // app/(app)/incidents/my-reports.tsx
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentType, type FC, type ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -17,7 +17,7 @@ import {
 /** Types */
 type Priority = "Urgent" | "Normal" | "Low";
 type Status = "New" | "In Review" | "Approved" | "Assigned" | "Ongoing" | "Resolved";
-type IconType = React.ComponentType<{ size?: number; color?: string }>;
+type IconType = ComponentType<{ size?: number; color?: string }>;
 
 type Row = {
   id: string;
@@ -28,13 +28,13 @@ type Row = {
 };
 
 /** Helpers */
-const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+const Card: FC<{ children: ReactNode; className?: string }> = ({ children, className }) => (
   <View className={`bg-muted rounded-2xl border border-border ${className ?? ""}`}>
     <View className="p-4">{children}</View>
   </View>
 );
 
-const CardHeader: React.FC<{ title: string; tone?: "primary" | "ring" | "accent" | "destructive" | "foreground" }> = ({
+const CardHeader: FC<{ title: string; tone?: "primary" | "ring" | "accent" | "destructive" | "foreground" }> = ({
   title,
   tone = "foreground",
 }) => {

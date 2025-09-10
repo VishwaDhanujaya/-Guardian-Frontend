@@ -1,7 +1,13 @@
 // app/(app)/incidents/view.tsx
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  createElement,
+} from "react";
 import { ActivityIndicator, Animated, Keyboard, Pressable, Switch, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
@@ -271,7 +277,7 @@ export default function ViewIncident() {
             {/* Meta row */}
             <View className="flex-row flex-wrap items-center gap-2">
               <View className="flex-row items-center gap-1 bg-background border border-border rounded-lg px-2 py-1">
-                {catIcon ? React.createElement(catIcon, { size: 14, color: "#0F172A" }) : <Info size={14} color="#0F172A" />}
+                {catIcon ? createElement(catIcon, { size: 14, color: "#0F172A" }) : <Info size={14} color="#0F172A" />}
                 <Text className="text-[12px] text-foreground">{report.category}</Text>
               </View>
               <View className="flex-row items-center gap-1 bg-background border border-border rounded-lg px-2 py-1">

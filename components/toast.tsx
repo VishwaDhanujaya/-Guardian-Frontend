@@ -1,5 +1,5 @@
 import { Text } from "@/components/ui/text";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 
 type Variant = "success" | "error" | "info";

@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Animated, Pressable, ScrollView, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 

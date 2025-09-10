@@ -1,6 +1,6 @@
 // app/(app)/_layout.tsx
 import { Stack, Redirect } from "expo-router";
-import React, { useContext, useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { AuthContext } from "@/context/AuthContext";
 
 /**

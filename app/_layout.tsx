@@ -3,7 +3,6 @@ import { ToastOverlay } from "@/components/toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { PortalHost } from "@rn-primitives/portal";
 import { Slot } from "expo-router";
-import React from "react";
 import { SafeAreaView, StatusBar } from "react-native";
 import "../global.css";
 
