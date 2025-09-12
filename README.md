@@ -1,4 +1,4 @@
-# Minimal Template
+# Guardian
 
 This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
 
